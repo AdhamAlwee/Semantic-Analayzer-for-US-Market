@@ -134,6 +134,28 @@ Paths, hyperparameters, API keys, `DEVICE` (auto-selects CUDA when available), a
 python -m src.main
 ```
 
+### Build real-news sentiment features (FNSPID + FinBERT)
+```bash
+python -m src.fnspid_loader     # download FNSPID (~29 GB) and extract headlines for STUDY_TICKERS
+python -m src.news_sentiment    # FinBERT-score headlines -> daily per-ticker features
+```
+Outputs `data/processed/daily_sentiment.parquet` (and `daily_sentiment_by_source.parquet`); coverage tables go to `results/data_coverage/`.
+
+### Ablation: price-only vs price + sentiment (XGBoost and LSTM, walk-forward)
+```bash
+python -m src.ablation                 # both architectures + comparison table
+python -m src.ablation --model lstm    # one architecture
+```
+Tests on 2021, 2022 and 2023 (each trained on all earlier years), at 1-, 3- and 5-day horizons, with down/stable/up and return-regression targets. Writes metrics, block-bootstrap confidence intervals, feature importances and `ablation_delta_f1.png` to `results/ablation/`.
+
+### Compare FinBERT against other (non-agentic) models
+```bash
+python -m src.model_comparison                 # 7 models x 2 labelled datasets
+python -m src.model_comparison --limit 200     # quick run
+python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct   # larger LLM (Colab GPU)
+```
+Writes accuracy/F1, per-class scores, confusion matrices and inter-model agreement (Cohen's kappa) to `results/model_comparison/`.
+
 ### Basic Sentiment Analysis
 ```python
 from config.config import DEVICE

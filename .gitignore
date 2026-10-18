@@ -101,3 +101,7 @@ __pycache__/
 *.pt
 *.pth
 config/settings_local.py
+
+# Run logs from long experiments
+results/**/*.log
+data/raw/*.log

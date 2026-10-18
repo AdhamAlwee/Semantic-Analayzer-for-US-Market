@@ -47,6 +47,18 @@ SYNTHETIC_SENTIMENT_LABELS = {
 US_STOCK_INDICES = ["^GSPC", "^IXIC", "^DJI"]  # S&P 500, NASDAQ, Dow Jones
 DEFAULT_TICKER = "AAPL"
 
+# FYP II study universe: one large-cap per sector (tech, consumer, banking, energy, healthcare),
+# chosen for dense FNSPID news coverage in every year 2018-2023 (see results/data_coverage)
+STUDY_TICKERS = ["INTC", "SBUX", "WFC", "CVX", "MRK"]
+STUDY_START = "2018-01-01"
+STUDY_END = "2023-12-31"
+
+# FNSPID (Dong, Fan & Peng, 2024) — downloaded from Hugging Face Zihan1004/FNSPID
+FNSPID_REPO = "Zihan1004/FNSPID"
+FNSPID_DIR = RAW_DATA_DIR / "fnspid"
+MARKET_TIMEZONE = "America/New_York"
+MARKET_CLOSE_HOUR = 16  # news at/after 16:00 ET counts toward the next trading day
+
 # Data Sources
 NEWS_API_KEY = os.getenv("NEWS_API_KEY", "")
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY", "")

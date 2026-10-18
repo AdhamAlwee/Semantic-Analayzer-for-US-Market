@@ -1,0 +1,26 @@
+{
+  "datasets": [
+    "phrasebank_allagree",
+    "twitter_fin_news"
+  ],
+  "models": [
+    "finbert",
+    "finbert_tone",
+    "distilroberta_fin",
+    "roberta_twitter",
+    "vader",
+    "bart_mnli_zeroshot",
+    "qwen2.5_1.5b_instruct"
+  ],
+  "limit": null,
+  "device": "cuda",
+  "checkpoints": {
+    "finbert": "ProsusAI/finbert",
+    "finbert_tone": "yiyanghkust/finbert-tone",
+    "distilroberta_fin": "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis",
+    "roberta_twitter": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+    "vader": "vaderSentiment",
+    "bart_mnli_zeroshot": "facebook/bart-large-mnli",
+    "qwen2.5_1.5b_instruct": "Qwen/Qwen2.5-1.5B-Instruct"
+  }
+}

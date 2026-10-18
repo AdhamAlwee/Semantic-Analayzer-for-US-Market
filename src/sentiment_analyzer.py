@@ -69,6 +69,29 @@ class FinBERTSentimentAnalyzer:
 
         return result
 
+    def predict_proba(self, texts: List[str], batch_size: int = 64) -> Dict[str, List[float]]:
+        """
+        Class probabilities for many texts.
+
+        Returns:
+            {"positive": [...], "negative": [...], "neutral": [...]} aligned with texts
+        """
+        probs = {label: [] for label in self.label_mapping.values()}
+        for i in range(0, len(texts), batch_size):
+            batch_inputs = self.tokenizer(
+                texts[i : i + batch_size],
+                return_tensors="pt",
+                truncation=True,
+                max_length=128,
+                padding=True,
+            )
+            batch_inputs = {key: val.to(self.device) for key, val in batch_inputs.items()}
+            with torch.no_grad():
+                p = torch.softmax(self.model(**batch_inputs).logits, dim=1).cpu()
+            for idx, label in self.label_mapping.items():
+                probs[label].extend(p[:, idx].tolist())
+        return probs
+
     def analyze_batch(self, texts: List[str], batch_size: int = 32) -> List[Dict]:
         """
         Analyze sentiment for multiple texts

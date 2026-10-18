@@ -1,0 +1,12 @@
+,,f1_macro,f1_macro,f1_macro,rmse,rmse,rmse
+feature_set,,price,price+sentiment,price+sentiment+company,price,price+sentiment,price+sentiment+company
+model,horizon,,,,,,
+lstm,1,0.323,0.348,0.322,1.851,1.854,1.852
+lstm,3,0.291,0.324,0.303,3.237,3.261,3.242
+lstm,5,0.302,0.335,0.305,4.141,4.246,4.203
+lstm_balanced,1,0.345,0.344,0.341,1.852,1.857,1.853
+lstm_balanced,3,0.327,0.345,0.337,3.228,3.261,3.246
+lstm_balanced,5,0.315,0.332,0.338,4.124,4.235,4.167
+xgboost,1,0.347,0.352,0.351,1.927,1.923,1.926
+xgboost,3,0.318,0.331,0.328,3.394,3.386,3.378
+xgboost,5,0.335,0.349,0.344,4.35,4.336,4.349

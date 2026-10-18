@@ -1,0 +1,6 @@
+ticker,headlines,trading_days,days_with_news,pct_days_with_news,median_headlines_per_news_day,pct_headlines_naming_company
+INTC,10820,1509,1476,97.8,6.0,38.3
+SBUX,5289,1509,1379,91.4,3.0,49.1
+WFC,5853,1509,1388,92.0,3.0,43.2
+CVX,7216,1509,1434,95.0,4.0,38.2
+MRK,5632,1509,1384,91.7,3.0,43.3

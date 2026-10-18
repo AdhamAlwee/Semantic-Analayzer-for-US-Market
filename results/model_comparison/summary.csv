@@ -1,0 +1,15 @@
+dataset,model,family,checkpoint,n,accuracy,macro_f1,weighted_f1,ms_per_text,params_millions,trained_on_this_dataset
+phrasebank_allagree,distilroberta_fin,Compact financial transformer,mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis,2264,0.9973498233215548,0.9958818798661824,0.9973460685498801,1.4536803886868215,82.1,True
+phrasebank_allagree,finbert,Domain-specific BERT (ours),ProsusAI/finbert,2264,0.9717314487632509,0.962503461452302,0.972039219196446,2.8300640901006417,109.5,True
+phrasebank_allagree,finbert_tone,Domain-specific BERT,yiyanghkust/finbert-tone,2264,0.9169611307420494,0.8970731604515786,0.9140081159698621,2.738621024717865,109.8,False
+phrasebank_allagree,qwen2.5_1.5b_instruct,"General LLM, prompted zero-shot",Qwen/Qwen2.5-1.5B-Instruct,2264,0.8025618374558304,0.8161395017572164,0.8089839347178619,55.925172173149484,1543.7,False
+phrasebank_allagree,bart_mnli_zeroshot,Zero-shot NLI (general),facebook/bart-large-mnli,2264,0.5468197879858657,0.6047417088413815,0.5235412439674751,38.48116011484263,407.3,False
+phrasebank_allagree,roberta_twitter,General-domain transformer,cardiffnlp/twitter-roberta-base-sentiment-latest,2264,0.7146643109540636,0.5749930725071062,0.6688912321216425,3.0046838781043195,124.6,False
+phrasebank_allagree,vader,Lexicon (general),vaderSentiment,2264,0.571113074204947,0.48714886272316676,0.5792588286732232,0.04794827737790358,,False
+twitter_fin_news,distilroberta_fin,Compact financial transformer,mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis,2388,0.7495812395309883,0.7063149000099133,0.7579812180156978,1.2664158710191211,82.1,False
+twitter_fin_news,finbert,Domain-specific BERT (ours),ProsusAI/finbert,2388,0.7252931323283082,0.6681732301000801,0.7328700943132527,2.2693949330013505,109.5,False
+twitter_fin_news,finbert_tone,Domain-specific BERT,yiyanghkust/finbert-tone,2388,0.748324958123953,0.6612484069937302,0.7423697951404913,2.4407091289715783,109.8,False
+twitter_fin_news,roberta_twitter,General-domain transformer,cardiffnlp/twitter-roberta-base-sentiment-latest,2388,0.7030988274706867,0.6127658562439487,0.6964033497370021,2.581784087100645,124.6,False
+twitter_fin_news,qwen2.5_1.5b_instruct,"General LLM, prompted zero-shot",Qwen/Qwen2.5-1.5B-Instruct,2388,0.5489949748743719,0.5694697569192618,0.5369721568216415,35.401133877720326,1543.7,False
+twitter_fin_news,bart_mnli_zeroshot,Zero-shot NLI (general),facebook/bart-large-mnli,2388,0.44221105527638194,0.45755787015254207,0.38020118450829116,36.88153257955531,407.3,False
+twitter_fin_news,vader,Lexicon (general),vaderSentiment,2388,0.49413735343383586,0.4469922156431448,0.5165519463239999,0.035945603014999564,,False
