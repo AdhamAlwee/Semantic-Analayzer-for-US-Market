@@ -128,7 +128,11 @@ MODEL_RUNNERS: Dict[str, Callable] = {
 
 
 def run_ticker_horizon(
-    df: pd.DataFrame, horizon: int, model_name: str = "xgboost"
+    df: pd.DataFrame,
+    horizon: int,
+    model_name: str = "xgboost",
+    feature_sets: Optional[Dict[str, List[str]]] = None,
+    test_years: Optional[List[int]] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Out-of-sample predictions for every feature set, and feature importances."""
     fit_predict = MODEL_RUNNERS[model_name]
@@ -136,14 +140,16 @@ def run_ticker_horizon(
     data = df.dropna(subset=[target]).reset_index(drop=True)
 
     pred_rows, importance_rows = [], []
-    for year, train_idx, test_idx in walk_forward_splits(data["date"], horizon):
+    feature_sets = feature_sets or FEATURE_SETS
+    for year, train_idx, test_idx in walk_forward_splits(data["date"], horizon,
+                                                         test_years or TEST_YEARS):
         train, test = data.iloc[train_idx], data.iloc[test_idx]
         band = float(np.quantile(np.abs(train[target]), 1 / 3))
         y_train_cls = label_movement(train[target].values, band)
         y_test_cls = label_movement(test[target].values, band)
         majority = int(np.bincount(y_train_cls, minlength=3).argmax())
 
-        for set_name, features in FEATURE_SETS.items():
+        for set_name, features in feature_sets.items():
             y_pred, ret_pred, importance = fit_predict(
                 data, train_idx, test_idx, features, target, y_train_cls, horizon
             )
@@ -262,7 +268,7 @@ def summarise(preds: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
     for (ticker, horizon), g in preds.groupby(["ticker", "horizon"]):
         order = ["series", "date"]  # keeps pooled ("ALL") rows paired and in time order
         base = g[g["feature_set"] == "price"].sort_values(order)
-        for set_name in FEATURE_SETS:
+        for set_name in g["feature_set"].unique():
             if set_name == "price":
                 continue
             new = g[g["feature_set"] == set_name].sort_values(order)

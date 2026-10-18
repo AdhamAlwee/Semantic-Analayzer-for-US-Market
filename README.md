@@ -29,176 +29,101 @@ Stock prices are influenced by financial news and market sentiment. Traditional 
 
 ```
 Semantic-Analayzer-for-US-Market/
-├── data/                      # Data directory
-│   ├── raw/                   # Raw data (news, stock data)
-│   └── processed/             # Preprocessed data
-├── src/                       # Source code modules
-│   ├── __init__.py
-│   ├── data_loader.py         # Data loading utilities
-│   ├── data_pipeline.py       # End-to-end data collection pipeline
-│   ├── sentiment_analyzer.py  # FinBERT sentiment analysis
-│   ├── prediction_model.py    # ML prediction models
-│   ├── main.py                # Full pipeline entry point
-│   └── utils.py               # Helper functions
-├── notebooks/                 # Jupyter notebooks for development
-├── models/                    # Trained models and checkpoints
-├── results/                   # Results, metrics, and visualizations
-├── config/                    # Configuration files
-│   └── config.py              # Project settings
-├── requirements.txt           # Python dependencies
-├── setup.py                   # Package setup
-├── .gitignore                 # Git ignore rules
-└── README.md                  # This file
+├── config/config.py              # Paths, study tickers/window, FNSPID settings, DEVICE
+├── src/
+│   ├── main.py                   # Runs the whole FYP II pipeline
+│   ├── fnspid_loader.py          # FNSPID download, headline extraction, coverage scans
+│   ├── sentiment_analyzer.py     # FinBERT wrapper (labels + probabilities)
+│   ├── news_sentiment.py         # Headline scoring -> trading-day alignment -> daily features
+│   ├── features.py               # Price features, sentiment features, forward targets
+│   ├── ablation.py               # Price-only vs price+sentiment, walk-forward, bootstrap tests
+│   ├── lstm_model.py             # LSTM (and class-weighted LSTM) for the ablation
+│   ├── model_comparison.py       # FinBERT vs 6 non-agentic sentiment models on labelled text
+│   ├── sentiment_downstream.py   # The same 7 models as sentiment sources for prediction
+│   ├── source_comparison.py      # FinBERT consistency and predictive value per news outlet
+│   └── utils.py                  # yfinance/date helpers
+├── data/                         # raw/ (FNSPID ~29 GB, prices) and processed/ (git-ignored)
+├── results/                      # Committed result tables and figures (see below)
+├── legacy/                       # FYP I synthetic-data prototype, kept for reference only
+├── requirements.txt
+└── setup.py
 ```
 
 ---
 
 ## Installation
 
-### Prerequisites
-- Python 3.8+
-- pip or conda package manager
+Python 3.12 is recommended (PyTorch wheels). A CUDA GPU is optional but makes FinBERT scoring and the LLM comparison much faster.
 
-### Setup Instructions
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd Semantic-Analayzer-for-US-Market
-   ```
-
-2. **Create a virtual environment:**
-   ```bash
-   python -m venv venv
-   # On Windows
-   venv\Scripts\activate
-   # On macOS/Linux
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-   Or install the project package (includes dependencies from `requirements.txt`):
-   ```bash
-   pip install .
-   ```
-
-4. **Set up environment variables:**
-   Create a `.env` file in the project root (loaded automatically by `config/config.py`):
-   ```
-   NEWS_API_KEY=your_news_api_key
-   ALPHA_VANTAGE_KEY=your_alpha_vantage_key
-   ```
+```bash
+python -m venv venv
+venv\Scripts\activate            # Windows  (macOS/Linux: source venv/bin/activate)
+pip install torch --index-url https://download.pytorch.org/whl/cu126   # or the CPU build
+pip install -r requirements.txt
+```
 
 ---
 
-## Key Technologies
+## Study Design
 
-| Component | Technology |
+| | |
 |---|---|
-| **Programming Language** | Python 3.8+ |
-| **NLP Model** | FinBERT (ProsusAI/finbert) |
-| **Deep Learning Framework** | PyTorch / Transformers |
-| **Data Processing** | Pandas, NumPy |
-| **Machine Learning** | Scikit-learn |
-| **Stock Data** | yfinance |
-| **Development Environment** | VS Code / Google Colab |
-
----
-
-## Core Modules
-
-### `src/data_loader.py`
-Handles loading and preprocessing of stock market data (yfinance) and financial news CSVs.
-
-### `src/data_pipeline.py`
-Collects stock data, generates synthetic news for demos, merges by date, and preprocesses features.
-
-### `src/sentiment_analyzer.py`
-FinBERT sentiment classification using label mappings from the model config (0=positive, 1=negative, 2=neutral).
-
-### `src/prediction_model.py`
-Random Forest / Gradient Boosting ensemble for next-day price direction (`Price_Up`).
-
-### `config/config.py`
-Paths, hyperparameters, API keys, `DEVICE` (auto-selects CUDA when available), and `SYNTHETIC_SENTIMENT_LABELS` for the demo news generator.
+| **Tickers** | INTC (tech), SBUX (consumer), WFC (banking), CVX (energy), MRK (healthcare): one per sector, picked for dense FNSPID coverage in every year (`results/data_coverage/fnspid_all_tickers_by_year.csv`) |
+| **Window** | 2018-01-01 to 2023-12-31 (1,509 trading days per ticker) |
+| **News** | 34,810 FNSPID headlines (Dong, Fan & Peng, 2024); outlet taken from the URL domain |
+| **Sentiment** | `ProsusAI/finbert`, no fine-tuning; daily mean, within-day std, positive/negative ratios, counts, 3-day-half-life decayed sentiment, company-mention subset |
+| **Targets** | down / stable / up and % return at 1, 3 and 5 trading days |
+| **Models** | XGBoost, LSTM, class-weighted LSTM; identical settings with and without sentiment |
+| **Evaluation** | Walk-forward: test 2021, 2022, 2023, each trained on earlier years with an h-day purge; accuracy, macro precision/recall/F1, RMSE; paired moving-block bootstrap CIs; Benjamini-Hochberg correction |
 
 ---
 
 ## Usage
 
-### Run full pipeline
 ```bash
-python -m src.main
+python -m src.main                                   # everything, in order
+python -m src.main --steps ablation downstream       # selected steps
 ```
 
-### Build real-news sentiment features (FNSPID + FinBERT)
+Or step by step:
+
 ```bash
-python -m src.fnspid_loader     # download FNSPID (~29 GB) and extract headlines for STUDY_TICKERS
-python -m src.news_sentiment    # FinBERT-score headlines -> daily per-ticker features
+python -m src.fnspid_loader         # download FNSPID and extract headlines for STUDY_TICKERS
+python -m src.news_sentiment        # FinBERT scores -> data/processed/daily_sentiment.parquet
+python -m src.ablation              # XGBoost, LSTM, class-weighted LSTM (+ --model to pick one)
+python -m src.model_comparison      # 7 sentiment models x 2 labelled datasets
+python -m src.sentiment_downstream  # the 7 models as sentiment sources for prediction
+python -m src.source_comparison     # news-outlet comparison (2018 to mid-2020)
 ```
-Outputs `data/processed/daily_sentiment.parquet` (and `daily_sentiment_by_source.parquet`); coverage tables go to `results/data_coverage/`.
 
-### Ablation: price-only vs price + sentiment (XGBoost and LSTM, walk-forward)
+A larger prompted LLM can be added to the text benchmark on a bigger GPU (e.g. Colab):
 ```bash
-python -m src.ablation                 # both architectures + comparison table
-python -m src.ablation --model lstm    # one architecture
-```
-Tests on 2021, 2022 and 2023 (each trained on all earlier years), at 1-, 3- and 5-day horizons, with down/stable/up and return-regression targets. Writes metrics, block-bootstrap confidence intervals, feature importances and `ablation_delta_f1.png` to `results/ablation/`.
-
-### Compare FinBERT against other (non-agentic) models
-```bash
-python -m src.model_comparison                 # 7 models x 2 labelled datasets
-python -m src.model_comparison --limit 200     # quick run
-python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct   # larger LLM (Colab GPU)
-```
-Writes accuracy/F1, per-class scores, confusion matrices and inter-model agreement (Cohen's kappa) to `results/model_comparison/`.
-
-### Basic Sentiment Analysis
-```python
-from config.config import DEVICE
-from src.sentiment_analyzer import FinBERTSentimentAnalyzer
-
-analyzer = FinBERTSentimentAnalyzer(device=DEVICE)
-result = analyzer.analyze_sentiment("Great earnings report!")
-print(result)  # {'text': '...', 'sentiment': 'positive', ...}
-```
-
-### Loading Stock Data
-```python
-from src.data_loader import StockDataLoader
-
-loader = StockDataLoader(ticker="AAPL", start_date="2024-01-01", end_date="2024-12-31")
-data = loader.fetch_stock_data()
-processed_data = loader.preprocess_stock_data(data)
+python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct
 ```
 
 ---
 
-## Evaluation Metrics
+## Results
 
-The model will be evaluated using:
-- **Accuracy:** Overall correctness of predictions
-- **Precision:** Ratio of true positives to predicted positives
-- **Recall:** Ratio of true positives to actual positives
-- **F1-Score:** Harmonic mean of precision and recall
-- **RMSE:** Root mean squared error for price predictions
+| Folder | Contents |
+|---|---|
+| `results/data_coverage/` | FNSPID coverage per ticker, year and source; FinBERT label mix |
+| `results/ablation/<model>/` | Metrics, per-year metrics, Δ vs price-only with CIs and q-values, predictions, `ablation_delta_f1.png` |
+| `results/ablation/architecture_comparison.csv` | Pooled results for all architectures side by side |
+| `results/model_comparison/` | Text-level benchmark: accuracy/F1, per-class scores, confusion matrices, agreement (Cohen's kappa) |
+| `results/sentiment_downstream/` | Predictive gain from each sentiment model, label agreement on FNSPID headlines |
+| `results/source_comparison/` | Market agreement per outlet, cross-outlet correlation, per-outlet ablation |
 
 ---
 
 ## Development Status
 
-- [x] Project structure setup
-- [x] Core modules created
-- [x] Configuration framework
-- [x] Data collection pipeline
-- [x] FinBERT integration
-- [x] Prediction model development
-- [x] Model evaluation (classification metrics)
-- [ ] Live news API integration
-- [ ] Results and visualization (extended)
+- [x] FNSPID data collection and coverage analysis
+- [x] FinBERT sentiment features (daily, decayed, company-specific, per source)
+- [x] Leakage-free walk-forward ablation at 1/3/5-day horizons (XGBoost, LSTM)
+- [x] FinBERT vs non-agentic models: text benchmark and downstream prediction
+- [x] News-source comparison
+- [ ] Dissertation write-up
 
 ---
 

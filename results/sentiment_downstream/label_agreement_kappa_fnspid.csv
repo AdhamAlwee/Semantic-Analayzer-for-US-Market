@@ -1,0 +1,8 @@
+,finbert,finbert_tone,distilroberta_fin,roberta_twitter,vader,bart_mnli_zeroshot,qwen2.5_1.5b_instruct
+finbert,1.0,0.457,0.595,0.331,0.022,0.214,0.254
+finbert_tone,0.457,1.0,0.541,0.387,0.032,0.234,0.293
+distilroberta_fin,0.595,0.541,1.0,0.371,0.025,0.218,0.278
+roberta_twitter,0.331,0.387,0.371,1.0,0.053,0.165,0.21
+vader,0.022,0.032,0.025,0.053,1.0,0.007,0.01
+bart_mnli_zeroshot,0.214,0.234,0.218,0.165,0.007,1.0,0.526
+qwen2.5_1.5b_instruct,0.254,0.293,0.278,0.21,0.01,0.526,1.0

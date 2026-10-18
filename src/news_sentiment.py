@@ -19,7 +19,7 @@ Usage:
 
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -64,18 +64,85 @@ def mentions_company(headlines: pd.Series, ticker: str) -> pd.Series:
     return headlines.str.lower().str.contains(pattern, regex=True)
 
 
-def score_headlines(news: pd.DataFrame, rebuild: bool = False) -> pd.DataFrame:
-    """Add FinBERT probabilities and a signed score (P(pos) - P(neg)) to each headline."""
-    if SCORED_PARQUET.exists() and not rebuild:
-        scored = pd.read_parquet(SCORED_PARQUET)
+def _suffixed(path: Path, sentiment_model: str) -> Path:
+    """FinBERT keeps the default file names; other sentiment models get a suffix."""
+    if sentiment_model == "finbert":
+        return path
+    return path.with_name(f"{path.stem}_{sentiment_model}{path.suffix}")
+
+
+def daily_sentiment_path(sentiment_model: str = "finbert") -> Path:
+    return _suffixed(DAILY_PARQUET, sentiment_model)
+
+
+SCORING_CHUNK = 5000
+
+
+def _score_in_chunks(
+    texts: List[str], sentiment_model: str, max_chunks: Optional[int] = None
+) -> np.ndarray:
+    """
+    Score with a comparison model, saving each chunk of probabilities to disk so
+    an interrupted run (e.g. low memory) resumes where it stopped. Stops after
+    max_chunks new chunks if given (raises ChunkLimitReached) for time-boxed runs.
+    """
+    from src.model_comparison import MODEL_FACTORIES
+
+    chunk_dir = PROCESSED_DATA_DIR / f"_scoring_chunks_{sentiment_model}"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+    n_chunks = int(np.ceil(len(texts) / SCORING_CHUNK))
+    todo = [i for i in range(n_chunks) if not (chunk_dir / f"{i:04d}.npy").exists()]
+
+    if todo:
+        clf = MODEL_FACTORIES[sentiment_model]()
+        for done, i in enumerate(todo):
+            if max_chunks is not None and done >= max_chunks:
+                clf.close()
+                raise ChunkLimitReached(f"{len(todo) - done} of {n_chunks} chunks left")
+            part = texts[i * SCORING_CHUNK : (i + 1) * SCORING_CHUNK]
+            np.save(chunk_dir / f"{i:04d}.npy", clf.predict_proba(part))
+            print(f"  chunk {i + 1}/{n_chunks} saved", flush=True)
+        clf.close()
+
+    matrix = np.vstack([np.load(chunk_dir / f"{i:04d}.npy") for i in range(n_chunks)])
+    for f in chunk_dir.glob("*.npy"):
+        f.unlink()
+    chunk_dir.rmdir()
+    return matrix
+
+
+class ChunkLimitReached(Exception):
+    """Raised when a time-boxed scoring run stops early; rerun to continue."""
+
+
+def score_headlines(
+    news: pd.DataFrame, rebuild: bool = False, sentiment_model: str = "finbert"
+) -> pd.DataFrame:
+    """
+    Add class probabilities and a signed score (P(pos) - P(neg)) to each headline.
+
+    sentiment_model: "finbert" (project default) or any model name from
+    src.model_comparison.MODEL_FACTORIES, for the downstream model comparison.
+    The label column is called finbert_label for every model so the
+    aggregation code is shared.
+    """
+    path = _suffixed(SCORED_PARQUET, sentiment_model)
+    if path.exists() and not rebuild:
+        scored = pd.read_parquet(path)
         if len(scored) == len(news):
             return scored
 
-    from src.sentiment_analyzer import FinBERTSentimentAnalyzer
+    texts = news["headline"].astype(str).tolist()
+    print(f"Scoring {len(news):,} headlines with {sentiment_model} on {DEVICE} ...", flush=True)
+    if sentiment_model == "finbert":
+        from src.sentiment_analyzer import FinBERTSentimentAnalyzer
 
-    print(f"Scoring {len(news):,} headlines with FinBERT on {DEVICE} ...")
-    analyzer = FinBERTSentimentAnalyzer(device=DEVICE)
-    probs = analyzer.predict_proba(news["headline"].astype(str).tolist())
+        probs = FinBERTSentimentAnalyzer(device=DEVICE).predict_proba(texts)
+    else:
+        from src.model_comparison import LABELS
+
+        matrix = _score_in_chunks(texts, sentiment_model)
+        probs = {label: matrix[:, i] for i, label in enumerate(LABELS)}
 
     scored = news.copy()
     for label in ("positive", "negative", "neutral"):
@@ -83,8 +150,8 @@ def score_headlines(news: pd.DataFrame, rebuild: bool = False) -> pd.DataFrame:
     scored["finbert_label"] = scored[["p_positive", "p_negative", "p_neutral"]].idxmax(axis=1).str[2:]
     scored["sentiment_score"] = scored["p_positive"] - scored["p_negative"]
 
-    scored.to_parquet(SCORED_PARQUET, index=False)
-    print(f"[OK] Saved scored headlines to {SCORED_PARQUET}")
+    scored.to_parquet(path, index=False)
+    print(f"[OK] Saved scored headlines to {path}")
     return scored
 
 
@@ -177,11 +244,13 @@ def add_decayed_sentiment(
 
 
 def build_daily_sentiment(
-    tickers: List[str] = STUDY_TICKERS, rebuild_scores: bool = False
+    tickers: List[str] = STUDY_TICKERS,
+    rebuild_scores: bool = False,
+    sentiment_model: str = "finbert",
 ) -> pd.DataFrame:
     """Full step: load news -> score -> align to trading days -> daily features."""
     news = load_news()
-    scored = score_headlines(news, rebuild=rebuild_scores)
+    scored = score_headlines(news, rebuild=rebuild_scores, sentiment_model=sentiment_model)
 
     aligned_frames, coverage_rows = [], []
     for ticker in tickers:
@@ -224,22 +293,25 @@ def build_daily_sentiment(
         aligned.groupby(["source", "ticker", "trading_day"]).apply(_aggregate, include_groups=False)
         .reset_index()
     )
-    daily.to_parquet(DAILY_PARQUET, index=False)
-    daily_by_source.to_parquet(DAILY_BY_SOURCE_PARQUET, index=False)
+    daily_path = daily_sentiment_path(sentiment_model)
+    by_source_path = _suffixed(DAILY_BY_SOURCE_PARQUET, sentiment_model)
+    daily.to_parquet(daily_path, index=False)
+    daily_by_source.to_parquet(by_source_path, index=False)
 
     COVERAGE_DIR.mkdir(parents=True, exist_ok=True)
     coverage = pd.DataFrame(coverage_rows)
-    coverage.to_csv(COVERAGE_DIR / "trading_day_coverage.csv", index=False)
     label_mix = pd.crosstab(aligned["ticker"], aligned["finbert_label"], normalize="index").round(3)
-    label_mix.to_csv(COVERAGE_DIR / "finbert_label_mix_by_ticker.csv")
-    source_mix = pd.crosstab(aligned["source"], aligned["finbert_label"], margins=True)
-    source_mix.to_csv(COVERAGE_DIR / "finbert_label_mix_by_source.csv")
+    if sentiment_model == "finbert":
+        coverage.to_csv(COVERAGE_DIR / "trading_day_coverage.csv", index=False)
+        label_mix.to_csv(COVERAGE_DIR / "finbert_label_mix_by_ticker.csv")
+        source_mix = pd.crosstab(aligned["source"], aligned["finbert_label"], margins=True)
+        source_mix.to_csv(COVERAGE_DIR / "finbert_label_mix_by_source.csv")
 
-    print(f"[OK] Daily sentiment: {len(daily):,} ticker-days -> {DAILY_PARQUET}")
-    print(f"[OK] Daily sentiment by source: {len(daily_by_source):,} rows -> {DAILY_BY_SOURCE_PARQUET}")
+    print(f"[OK] Daily sentiment ({sentiment_model}): {len(daily):,} ticker-days -> {daily_path}")
+    print(f"[OK] Daily sentiment by source: {len(daily_by_source):,} rows -> {by_source_path}")
     print("\nTrading-day coverage:")
     print(coverage.to_string(index=False))
-    print("\nFinBERT label mix per ticker:")
+    print(f"\n{sentiment_model} label mix per ticker:")
     print(label_mix.to_string())
     return daily
 

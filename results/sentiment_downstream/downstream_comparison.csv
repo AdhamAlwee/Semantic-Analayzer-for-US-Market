@@ -1,0 +1,8 @@
+sentiment_model,dF1_h1,dF1_h3,dF1_h5,cells_improved_of_15,min_q_pooled,text_macro_f1_twitter
+finbert,0.005,0.0132,0.0145,10,0.648,0.6682
+bart_mnli_zeroshot,0.004,0.0061,0.009,11,0.8095,0.4576
+qwen2.5_1.5b_instruct,0.0023,0.0116,0.0023,9,0.72,0.5695
+roberta_twitter,0.0098,0.0102,0.0002,11,0.7298,0.6128
+vader,-0.0018,0.0037,-0.0023,7,0.8941,0.447
+distilroberta_fin,0.0083,0.0035,-0.0024,8,0.769,0.7063
+finbert_tone,0.0022,0.003,-0.0029,8,0.8941,0.6612

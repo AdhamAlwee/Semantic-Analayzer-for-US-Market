@@ -1,0 +1,8 @@
+,negative,neutral,positive
+finbert,0.166,0.625,0.209
+finbert_tone,0.135,0.586,0.279
+distilroberta_fin,0.153,0.596,0.251
+roberta_twitter,0.092,0.755,0.153
+vader,0.004,0.985,0.011
+bart_mnli_zeroshot,0.238,0.119,0.643
+qwen2.5_1.5b_instruct,0.158,0.224,0.618

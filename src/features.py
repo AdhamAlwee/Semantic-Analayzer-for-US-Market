@@ -17,7 +17,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from config.config import STUDY_TICKERS
-from src.news_sentiment import DAILY_PARQUET, fetch_prices
+from src.news_sentiment import DAILY_PARQUET, daily_sentiment_path, fetch_prices
 
 HORIZONS = [1, 3, 5]  # trading days: 1-day, 3-day, 1-week
 
@@ -109,6 +109,7 @@ def build_dataset(ticker: str, daily_sentiment: pd.DataFrame = None) -> pd.DataF
     return df
 
 
-def build_all(tickers: List[str] = STUDY_TICKERS) -> pd.DataFrame:
-    daily = pd.read_parquet(DAILY_PARQUET)
+def build_all(tickers: List[str] = STUDY_TICKERS, sentiment_model: str = "finbert") -> pd.DataFrame:
+    """All tickers; sentiment features come from the chosen sentiment model's daily file."""
+    daily = pd.read_parquet(daily_sentiment_path(sentiment_model))
     return pd.concat([build_dataset(t, daily) for t in tickers], ignore_index=True)

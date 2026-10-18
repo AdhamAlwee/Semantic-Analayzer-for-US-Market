@@ -132,14 +132,21 @@ TRAINED_ON = {
 
 
 class SentimentClassifier:
-    """Common interface: predict(texts) -> list of negative/neutral/positive."""
+    """
+    Common interface:
+      predict_proba(texts) -> (n, 3) array of probabilities in LABELS order
+      predict(texts)       -> list of negative/neutral/positive
+    """
 
     name: str = ""
     family: str = ""
     checkpoint: str = ""
 
-    def predict(self, texts: List[str]) -> List[str]:
+    def predict_proba(self, texts: List[str]) -> np.ndarray:
         raise NotImplementedError
+
+    def predict(self, texts: List[str]) -> List[str]:
+        return [LABELS[i] for i in self.predict_proba(texts).argmax(axis=1)]
 
     def num_parameters(self) -> Optional[int]:
         return None
@@ -179,6 +186,11 @@ class VaderClassifier(SentimentClassifier):
                 preds.append("neutral")
         return preds
 
+    def predict_proba(self, texts: List[str]) -> np.ndarray:
+        """VADER's neg/neu/pos proportions (they sum to 1) as pseudo-probabilities."""
+        scores = [self.analyzer.polarity_scores(t) for t in texts]
+        return np.array([[s["neg"], s["neu"], s["pos"]] for s in scores])
+
 
 class HFSequenceClassifier(SentimentClassifier):
     """Any Hugging Face sequence-classification checkpoint with sentiment labels."""
@@ -206,10 +218,11 @@ class HFSequenceClassifier(SentimentClassifier):
             int(k): normalize_label(v) for k, v in self.model.config.id2label.items()
         }
 
-    def predict(self, texts: List[str]) -> List[str]:
+    def predict_proba(self, texts: List[str]) -> np.ndarray:
         import torch
 
-        preds = []
+        column = [LABELS.index(self.id2label[i]) for i in range(len(self.id2label))]
+        out = []
         for i in range(0, len(texts), self.batch_size):
             batch = self.tokenizer(
                 texts[i : i + self.batch_size],
@@ -219,9 +232,11 @@ class HFSequenceClassifier(SentimentClassifier):
                 padding=True,
             ).to(self.device)
             with torch.no_grad():
-                logits = self.model(**batch).logits
-            preds.extend(self.id2label[int(c)] for c in logits.argmax(dim=1))
-        return preds
+                probs = torch.softmax(self.model(**batch).logits, dim=1).cpu().numpy()
+            ordered = np.zeros_like(probs)
+            ordered[:, column] = probs
+            out.append(ordered)
+        return np.vstack(out)
 
     def num_parameters(self) -> int:
         return sum(p.numel() for p in self.model.parameters())
@@ -258,7 +273,7 @@ class ZeroShotNLIClassifier(SentimentClassifier):
         )
         self.template = "The sentiment of this financial news is {}."
 
-    def predict(self, texts: List[str]) -> List[str]:
+    def predict_proba(self, texts: List[str]) -> np.ndarray:
         outputs = self.pipe(
             texts,
             candidate_labels=LABELS,
@@ -267,7 +282,9 @@ class ZeroShotNLIClassifier(SentimentClassifier):
         )
         if isinstance(outputs, dict):
             outputs = [outputs]
-        return [o["labels"][0] for o in outputs]
+        return np.array(
+            [[dict(zip(o["labels"], o["scores"]))[label] for label in LABELS] for o in outputs]
+        )
 
     def num_parameters(self) -> int:
         return sum(p.numel() for p in self.pipe.model.parameters())
@@ -334,10 +351,11 @@ class PromptedLLMClassifier(SentimentClassifier):
             messages, tokenize=False, add_generation_prompt=True
         )
 
-    def predict(self, texts: List[str]) -> List[str]:
+    def predict_proba(self, texts: List[str]) -> np.ndarray:
+        """Softmax over the three label words' next-token logits."""
         import torch
 
-        preds = []
+        out = []
         for i in range(0, len(texts), self.batch_size):
             prompts = [self._build_prompt(t) for t in texts[i : i + self.batch_size]]
             batch = self.tokenizer(prompts, return_tensors="pt", padding=True).to(
@@ -345,9 +363,9 @@ class PromptedLLMClassifier(SentimentClassifier):
             )
             with torch.no_grad():
                 next_token_logits = self.model(**batch).logits[:, -1, :]
-            label_logits = next_token_logits[:, self.label_token_ids]
-            preds.extend(LABELS[int(c)] for c in label_logits.argmax(dim=1))
-        return preds
+            label_logits = next_token_logits[:, self.label_token_ids].float()
+            out.append(torch.softmax(label_logits, dim=1).cpu().numpy())
+        return np.vstack(out)
 
     def num_parameters(self) -> int:
         return sum(p.numel() for p in self.model.parameters())

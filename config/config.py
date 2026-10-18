@@ -34,13 +34,6 @@ LEARNING_RATE = 2e-5
 TRAIN_TEST_SPLIT = 0.8
 RANDOM_SEED = 42
 
-# Synthetic news pipeline labels (create_synthetic_news_data in data_pipeline.py)
-SYNTHETIC_SENTIMENT_LABELS = {
-    0: "negative",
-    1: "neutral",
-    2: "positive",
-}
-
 # FinBERT (ProsusAI/finbert) uses id2label: 0=positive, 1=negative, 2=neutral — see sentiment_analyzer.py
 
 # Stock Market Data
