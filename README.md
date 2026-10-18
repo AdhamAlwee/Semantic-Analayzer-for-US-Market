@@ -6,6 +6,8 @@ A Final Year Project (FYP) for predicting US stock price movements by analyzing 
 **Supervisor:** Ts. Dr. Nurul Aida Binti Osman  
 **Institution:** Universiti Teknologi PETRONAS (UTP)
 
+> A full account of the FYP II work, results and changes from the interim report is in [FYP2_WORK_SUMMARY.md](FYP2_WORK_SUMMARY.md).
+
 ---
 
 ## Project Overview
