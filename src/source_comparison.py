@@ -10,7 +10,11 @@ labels for FNSPID headlines, so two label-free measures are used:
     FinBERT score matches the sign of the stock's 2-day reaction return
     close(T-1) -> close(T+1) around the headline's trading day T (FNSPID
     timestamps are date-only, so the window spans the whole publication day);
-    plus the Spearman correlation between score and reaction return
+    plus the Spearman correlation between score and reaction return.
+    Because that window includes day T, some headlines just describe a move
+    that has already happened. The same measures are therefore also reported
+    on a forward-only window close(T) -> close(T+1) (columns prefixed
+    "fwd_"), a move the headline cannot already be describing
   * cross-source consistency: on ticker-days covered by two outlets, the
     correlation of their daily mean sentiment
   Compared on INTC (the only stock all six outlets cover) and on the four
@@ -65,7 +69,7 @@ def wilson_interval(successes: int, n: int, z: float = 1.96):
 
 
 def load_window_headlines() -> pd.DataFrame:
-    """FinBERT-scored headlines in the source window, with trading day and reaction return."""
+    """FinBERT-scored headlines in the source window, with trading day and reaction returns."""
     scored = pd.read_parquet(SCORED_PARQUET)
     end = pd.Timestamp(SOURCE_WINDOW_END, tz="UTC") + pd.Timedelta(days=1)
     scored = scored[scored["published_utc"] < end]
@@ -77,9 +81,26 @@ def load_window_headlines() -> pd.DataFrame:
         aligned = assign_trading_day(group, days)
         close = prices.set_index(pd.to_datetime(prices["date"]))["close"]
         reaction = close.shift(-1) / close.shift(1) - 1  # close(T-1) -> close(T+1)
+        forward = close.shift(-1) / close - 1  # close(T) -> close(T+1)
         aligned["reaction_ret_2d"] = aligned["trading_day"].map(reaction)
+        aligned["forward_ret_1d"] = aligned["trading_day"].map(forward)
         frames.append(aligned)
-    return pd.concat(frames, ignore_index=True).dropna(subset=["reaction_ret_2d"])
+    return pd.concat(frames, ignore_index=True).dropna(subset=["reaction_ret_2d", "forward_ret_1d"])
+
+
+def agreement_metrics(g: pd.DataFrame, ret_col: str, prefix: str = "") -> Dict[str, float]:
+    """Sign agreement (non-neutral headlines, Wilson CI) and Spearman vs one return window."""
+    polar = g[g["finbert_label"] != "neutral"]
+    hits = int((np.sign(polar["sentiment_score"]) == np.sign(polar[ret_col])).sum())
+    low, high = wilson_interval(hits, len(polar))
+    rho, p = spearmanr(g["sentiment_score"], g[ret_col])
+    return {
+        f"{prefix}market_agreement": hits / len(polar) if len(polar) else np.nan,
+        f"{prefix}agreement_ci_low": low,
+        f"{prefix}agreement_ci_high": high,
+        f"{prefix}spearman_score_vs_reaction": rho,
+        f"{prefix}spearman_p": p,
+    }
 
 
 def source_consistency_table(news: pd.DataFrame) -> pd.DataFrame:
@@ -87,10 +108,6 @@ def source_consistency_table(news: pd.DataFrame) -> pd.DataFrame:
     for source, g in news.groupby("source"):
         if len(g) < MIN_HEADLINES:
             continue
-        polar = g[g["finbert_label"] != "neutral"]
-        hits = int((np.sign(polar["sentiment_score"]) == np.sign(polar["reaction_ret_2d"])).sum())
-        low, high = wilson_interval(hits, len(polar))
-        rho, p = spearmanr(g["sentiment_score"], g["reaction_ret_2d"])
         mix = g["finbert_label"].value_counts(normalize=True)
         rows.append({
             "source": source,
@@ -100,12 +117,9 @@ def source_consistency_table(news: pd.DataFrame) -> pd.DataFrame:
             "pct_neutral": mix.get("neutral", 0) * 100,
             "pct_negative": mix.get("negative", 0) * 100,
             "mean_score": g["sentiment_score"].mean(),
-            "non_neutral_headlines": len(polar),
-            "market_agreement": hits / len(polar) if len(polar) else np.nan,
-            "agreement_ci_low": low,
-            "agreement_ci_high": high,
-            "spearman_score_vs_reaction": rho,
-            "spearman_p": p,
+            "non_neutral_headlines": int((g["finbert_label"] != "neutral").sum()),
+            **agreement_metrics(g, "reaction_ret_2d"),
+            **agreement_metrics(g, "forward_ret_1d", prefix="fwd_"),
         })
     return pd.DataFrame(rows).sort_values("headlines", ascending=False)
 
@@ -189,7 +203,9 @@ def run_source_comparison() -> None:
 
     pd.set_option("display.width", 220)
     cols = ["source", "headlines", "pct_positive", "pct_neutral", "pct_negative", "market_agreement",
-            "agreement_ci_low", "agreement_ci_high", "spearman_score_vs_reaction", "spearman_p"]
+            "agreement_ci_low", "agreement_ci_high", "spearman_score_vs_reaction", "spearman_p",
+            "fwd_market_agreement", "fwd_agreement_ci_low", "fwd_agreement_ci_high",
+            "fwd_spearman_score_vs_reaction", "fwd_spearman_p"]
     print("\nINTC, all outlets (FinBERT):")
     print(intc_sources[cols].round(3).to_string(index=False))
     print("\nNasdaq vs Benzinga, INTC+MRK+SBUX+WFC:")

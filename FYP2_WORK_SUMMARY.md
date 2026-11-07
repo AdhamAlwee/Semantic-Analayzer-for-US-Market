@@ -185,21 +185,31 @@ FNSPID only has outlets other than Nasdaq.com up to June 2020, so this compariso
 
 ### Market agreement
 
-This measures how often FinBERT's sentiment matches the stock's direction over the 2 days around publication (close of day T−1 to close of day T+1).
+This measures how often FinBERT's sentiment (non-neutral headlines only) matches the stock's direction. It is measured over two windows:
+
+- **2-day window**, close of day T−1 to close of day T+1. This includes the publication day, so some headlines simply describe a move that has already happened.
+- **Forward-only window**, close of day T to close of day T+1. The headline cannot be describing this move, so this is the measure that matters for prediction.
 
 - **On INTC (6 outlets):**
 
-  | Outlet | Agreement |
-  |---|---|
-  | GuruFocus | 72% |
-  | Benzinga | 62% |
-  | Seeking Alpha | 61% |
-  | IBD | 60% |
-  | Nasdaq | 57% |
-  | Zacks | 53% |
+  | Outlet | 2-day window | Forward-only |
+  |---|---|---|
+  | GuruFocus | 72% | 55% |
+  | Benzinga | 62% | 53% |
+  | Seeking Alpha | 61% | 54% |
+  | IBD | 60% | 55% |
+  | Nasdaq | 57% | 49% |
+  | Zacks | 53% | 50% |
 
-- **Across INTC, MRK, SBUX and WFC:** Benzinga 62% (95% CI 60–65%) against Nasdaq 55% (95% CI 53–57%).
-- **Caveat:** the window includes the publication day, and some headlines describe a price move that has already happened. This inflates agreement.
+- **Across INTC, MRK, SBUX and WFC:**
+
+  | Outlet | 2-day window (95% CI) | Forward-only (95% CI) |
+  |---|---|---|
+  | Benzinga | 62% (60–65%) | 52% (49–54%) |
+  | Nasdaq | 55% (53–57%) | 51% (49–52%) |
+
+- **Most of the agreement is the market reacting on the same day, not prediction.** Over the forward-only window every outlet is close to 50%, and the Benzinga–Nasdaq gap shrinks from 7 points to 1, with overlapping confidence intervals. Benzinga's forward rank correlation is tiny but non-zero (ρ = 0.05, p = 0.01); Nasdaq's is not (ρ = 0.02, p = 0.15).
+- This matches the ablation: sentiment tracks price moves as they happen, but carries little information about the next day.
 
 ### Cross-outlet correlation
 
