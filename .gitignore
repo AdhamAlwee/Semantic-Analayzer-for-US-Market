@@ -105,3 +105,9 @@ config/settings_local.py
 # Run logs from long experiments
 results/**/*.log
 data/raw/*.log
+
+# Dissertation: LaTeX output goes to dissertation/build/ (covered by build/ above)
+dissertation/reference/
+
+# Supervisor progress updates (contain name and student ID)
+reports/

@@ -1,0 +1,456 @@
+% UTP FYP dissertation. Layout comes from reference/UTP-FYP-Dissertation-Template.tex
+% (UTP FYP Guidelines v7.0). Limit: 50 pages excluding appendices; write in the passive voice.
+% Build from this folder with `latexmk`. The engine must be XeLaTeX; the PDF goes to build/.
+
+\documentclass[a4paper,12pt,oneside]{report}
+
+% ------------------------------------------------------------
+% FONT SETUP
+% ------------------------------------------------------------
+% The guideline requires Times New Roman, 12 pt. XeLaTeX/LuaLaTeX
+% uses the real system font (falls back to Tinos / Nimbus Roman).
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{newtxtext,newtxmath}
+  \renewcommand{\ttdefault}{\rmdefault}
+\else
+  \usepackage{fontspec}
+  \IfFontExistsTF{Times New Roman}{%
+    \setmainfont{Times New Roman}%
+    \setsansfont{Times New Roman}%
+    \setmonofont{Times New Roman}%
+  }{%
+    \IfFontExistsTF{Tinos}{%
+      \setmainfont{Tinos}%
+      \setsansfont{Tinos}%
+      \setmonofont{Tinos}%
+    }{%
+      \setmainfont{Nimbus Roman}%
+      \setsansfont{Nimbus Roman}%
+      \setmonofont{Nimbus Roman}%
+    }%
+  }
+  \usepackage{unicode-math}
+  \IfFontExistsTF{Times New Roman}{%
+    \setmathfont{XITSMath-Regular.otf}%
+  }{}
+\fi
+
+% ------------------------------------------------------------
+% CORE PACKAGES
+% ------------------------------------------------------------
+\usepackage[left=40mm,top=25mm,right=25mm,bottom=25mm]{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\graphicspath{{figures/}{../results/}}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{chngcntr}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{etoolbox}
+\usepackage{xcolor}
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref}
+
+% ------------------------------------------------------------
+% APA 7 REFERENCES
+% ------------------------------------------------------------
+% Reads references.bib beside this .tex file.
+% Use \parencite{key} or \textcite{key} in the text.
+\usepackage[style=apa,backend=biber,sortcites=true,sorting=nyt,natbib=true]{biblatex}
+\DeclareLanguageMapping{english}{english-apa}
+\addbibresource{references.bib}
+\setlength\bibhang{0.5in}
+
+% ------------------------------------------------------------
+% STUDENT / REPORT METADATA
+% ------------------------------------------------------------
+% TODO: Replace these fields only. The title page and the
+% Certification of Approval read from these commands.
+\newcommand{\ProjectTitle}{Financial News Sentiment Analysis Using FinBERT for Stock Price Movement Prediction in the US Market}
+\newcommand{\StudentName}{Mas Hairul Adham Bin Alwee}
+\newcommand{\StudentID}{22005746}
+\newcommand{\DegreeName}{Bachelor of Computer Science (Hons)}
+% TODO: Confirm the programme wording and the submission month with the FYP Coordinator.
+\newcommand{\ProgrammeName}{Computer Science}
+\newcommand{\SubmissionSession}{November 2026}
+\newcommand{\SupervisorName}{Ts. Dr. Nurul Aida Binti Osman}
+% "Interim report" for FYP I, "Dissertation" for FYP II.
+\newcommand{\ReportType}{Dissertation}
+
+% ------------------------------------------------------------
+% BODY SPACING AND PARAGRAPH STYLE
+% ------------------------------------------------------------
+\onehalfspacing
+\setlength{\parindent}{0pt} % Guideline: paragraphs start from left margin
+\setlength{\parskip}{18pt plus 2pt minus 2pt} % visual equivalent of the required paragraph gap
+\raggedbottom
+
+% Single spacing for tables, figures, and source code blocks.
+\AtBeginEnvironment{table}{\singlespacing\setlength{\parskip}{0pt}}
+\AtBeginEnvironment{figure}{\singlespacing\setlength{\parskip}{0pt}}
+\AtBeginEnvironment{longtable}{\singlespacing\setlength{\parskip}{0pt}}
+
+% Bulleted/numbered lists: tight spacing so lists sit inline with body
+% paragraphs instead of picking up the 18pt \parskip between items.
+\setlist{topsep=0pt, parsep=0pt, itemsep=0pt, partopsep=0pt}
+
+% Source code / computer programs: 8 pt, single-spaced.
+\lstset{
+  basicstyle=\fontsize{8pt}{9pt}\selectfont,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  xleftmargin=0pt,
+  xrightmargin=0pt,
+  captionpos=t
+}
+
+% ------------------------------------------------------------
+% PAGINATION
+% ------------------------------------------------------------
+% Page numbers must be bottom-centred, without brackets/hyphens/decoration.
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}
+}
+\pagestyle{plain}
+
+% ------------------------------------------------------------
+% HEADING LEVELS
+% ------------------------------------------------------------
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+
+% Chapter title: centred, bold, uppercase, 14 pt.
+% Appendix 4-1 visually places the chapter block about 50 mm from the top edge.
+% With a 25 mm top margin, a 25 mm pre-title drop puts the title block near that point.
+\newcommand{\ChapterLabel}{CHAPTER}
+\titleformat{\chapter}[display]
+  {\centering\normalfont\bfseries\fontsize{14pt}{16pt}\selectfont}
+  {\ChapterLabel\ \thechapter}
+  {12pt}
+  {\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{25mm}{24pt}
+
+% Numberless chapter-like pages, e.g. Abstract, Acknowledgements, References.
+\titleformat{name=\chapter,numberless}[display]
+  {\centering\normalfont\bfseries\fontsize{14pt}{16pt}\selectfont}
+  {}
+  {0pt}
+  {\MakeUppercase}
+\titlespacing*{name=\chapter,numberless}{0pt}{0pt}{24pt}
+
+% First level under chapter: 12 pt, bold, uppercase.
+\titleformat{\section}
+  {\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont}
+  {\thesection}
+  {1em}
+  {\MakeUppercase}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+
+% Second level: 12 pt, bold, title case.
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont}
+  {\thesubsection}
+  {1em}
+  {}
+\titlespacing*{\subsection}{1.27cm}{12pt}{6pt}
+
+% ------------------------------------------------------------
+% FIGURES AND TABLES
+% ------------------------------------------------------------
+% Dissertation/list samples use chapter-based numbering: Figure 1.1, Table 1.1.
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+
+% Tables: caption above, centred. Figures: caption below, centred.
+\captionsetup[table]{position=above,justification=centering,singlelinecheck=true,labelsep=colon,font={stretch=1}}
+\captionsetup[figure]{position=below,justification=centering,singlelinecheck=true,labelsep=colon,font={stretch=1}}
+% Source code listings: caption above, centred, same style as tables.
+\captionsetup[lstlisting]{position=above,justification=centering,singlelinecheck=true,labelsep=colon,font={stretch=1}}
+
+% Use this wrapper for tables so the caption is always placed above.
+%   \begin{utptable}{Caption text} \label{tab:key} \begin{tabular}...\end{tabular} \end{utptable}
+\newenvironment{utptable}[2][H]
+  {\begin{table}[#1]\centering\caption{#2}}
+  {\end{table}\FloatBarrier}
+
+% Thin border around inserted images/diagrams (imported figures otherwise
+% sit directly on the white page with no visible edge).
+%   \FramedGraphic{width=0.8\textwidth}{assets/my-image.png}
+\newcommand{\FramedGraphic}[2]{%
+  \setlength{\fboxsep}{0pt}%
+  \setlength{\fboxrule}{0.5pt}%
+  \fbox{\includegraphics[#1]{#2}}%
+}
+
+% ------------------------------------------------------------
+% TABLE OF CONTENTS / LIST OF FIGURES / LIST OF TABLES
+% ------------------------------------------------------------
+\renewcommand{\contentsname}{TABLE OF CONTENTS}
+\renewcommand{\listfigurename}{LIST OF FIGURES}
+\renewcommand{\listtablename}{LIST OF TABLES}
+
+% Table of contents title: centred, bold, 14 pt.
+\renewcommand{\cfttoctitlefont}{\hfill\normalfont\bfseries\fontsize{14pt}{16pt}\selectfont}
+\renewcommand{\cftaftertoctitle}{\hfill\null\par\vspace{12pt}}
+
+% Chapter entries in TOC: CHAPTER 1: INTRODUCTION, with dot leaders.
+\renewcommand{\cftchapfont}{\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont}
+\renewcommand{\cftchappagefont}{\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont}
+\renewcommand{\cftchappresnum}{CHAPTER~}
+\renewcommand{\cftchapaftersnum}{:~}
+\setlength{\cftchapnumwidth}{3.2cm}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+
+% Section/subsection entries: plain 12 pt, visually closer to Appendix 9-1.
+\renewcommand{\cftsecfont}{\normalfont\fontsize{12pt}{14pt}\selectfont}
+\renewcommand{\cftsecpagefont}{\normalfont\fontsize{12pt}{14pt}\selectfont}
+\renewcommand{\cftsubsecfont}{\normalfont\fontsize{12pt}{14pt}\selectfont}
+\renewcommand{\cftsubsecpagefont}{\normalfont\fontsize{12pt}{14pt}\selectfont}
+\setlength{\cftsecindent}{1.5cm}
+\setlength{\cftsubsecindent}{2.4cm}
+
+% List of Figures/List of Tables: left-aligned heading, no dot leaders, as in Appendix 9-1 visual sample.
+\renewcommand{\cftloftitlefont}{\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont}
+\renewcommand{\cftlottitlefont}{\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont}
+\renewcommand{\cftafterloftitle}{\par\vspace{12pt}}
+\setlength{\cftafterloftitleskip}{0pt}
+\setlength{\cftafterlottitleskip}{0pt}
+\renewcommand{\cftafterlottitle}{\par\vspace{12pt}}
+\renewcommand{\cftfigpresnum}{Figure~}
+\renewcommand{\cfttabpresnum}{Table~}
+\setlength{\cftfignumwidth}{2.7cm}
+\setlength{\cfttabnumwidth}{2.7cm}
+\renewcommand{\cftfigleader}{\hfill}
+\renewcommand{\cfttableader}{\hfill}
+
+% ------------------------------------------------------------
+% FRONT MATTER HELPERS
+% ------------------------------------------------------------
+\newcommand{\UTPPrelimChapter}[1]{%
+  \clearpage
+  \phantomsection
+  \addcontentsline{toc}{chapter}{#1}
+  \chapter*{#1}
+}
+
+% Abbreviations and Nomenclatures page: heading styled like the List of
+% Figures/List of Tables titles (left-aligned, bold, 12 pt); entries are
+% single-spaced rows with no rules, as in the other list pages.
+\newcommand{\UTPListHeading}[1]{%
+  \vspace*{11mm}% puts the title at the same height as the List of Figures/Tables titles
+  {\noindent\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont #1\par}%
+  \vspace{12pt}%
+}
+\newcommand{\UTPListSubheading}[1]{%
+  {\noindent\normalfont\bfseries\fontsize{12pt}{14pt}\selectfont #1\par}%
+  \vspace{6pt}%
+}
+\newcommand{\AbbrevEntry}[2]{#1 & \raggedright\arraybackslash #2 \\[2pt]}
+
+\newcommand{\MakeUTPTitlePage}{%
+  \begin{titlepage}
+  \thispagestyle{empty}
+  \centering
+  \vspace*{0mm}
+
+  {\bfseries \ProjectTitle\par}
+
+  \vspace{18pt}
+  by
+
+  \vspace{24pt}
+  {\StudentName\par}
+  {\StudentID\par}
+
+  \vspace{42pt}
+  \ReportType\ submitted in partial fulfilment of\par
+  the requirements for the\par
+  \DegreeName\par
+
+  \vspace{36pt}
+  \SubmissionSession\par
+
+  \vfill
+  \begin{flushleft}
+  Universiti Teknologi PETRONAS\par
+  32610, Bandar Seri Iskandar\par
+  Perak Darul Ridzuan\par
+  \end{flushleft}
+  \end{titlepage}
+}
+
+% ------------------------------------------------------------
+% APPENDIX HELPER
+% ------------------------------------------------------------
+\newcommand{\StartAppendices}{%
+  \clearpage
+  \appendix
+  \renewcommand{\ChapterLabel}{APPENDIX}
+  \phantomsection
+  \addcontentsline{toc}{chapter}{APPENDICES}
+  \addtocontents{toc}{\protect\renewcommand{\protect\cftchappresnum}{APPENDIX~}}
+}
+
+% ============================================================
+% DOCUMENT START
+% ============================================================
+\begin{document}
+
+% ------------------------------------------------------------
+% FRONT MATTER: Roman numerals, bottom-centred
+% ------------------------------------------------------------
+\pagenumbering{roman}
+\MakeUTPTitlePage
+\setcounter{page}{1}
+
+
+% Certification of Approval
+\UTPPrelimChapter{CERTIFICATION OF APPROVAL}
+{%
+\singlespacing
+\setlength{\parskip}{0pt}
+\begin{center}
+\textbf{\ProjectTitle}\par
+\vspace{24pt}
+by
+\vspace{24pt}
+
+\StudentName\par
+\StudentID\par
+\vspace{32pt}
+
+\begin{spacing}{1.5}
+A project \MakeLowercase{\ReportType} submitted to the\par
+\ProgrammeName\ Programme\par
+Universiti Teknologi PETRONAS\par
+in partial fulfilment of the requirement for the\par
+\MakeUppercase{\DegreeName}\par
+\end{spacing}
+\end{center}
+
+\vfill
+Approved by,
+
+\vspace{54pt}
+\rule{70mm}{0.4pt}\par
+(\SupervisorName)
+
+\vspace{36pt}
+\begin{center}
+UNIVERSITI TEKNOLOGI PETRONAS\par
+BANDAR SERI ISKANDAR, PERAK\par
+\SubmissionSession\par
+\end{center}
+}%
+
+% Certification of Originality
+\UTPPrelimChapter{CERTIFICATION OF ORIGINALITY}
+This is to certify that I am responsible for the work submitted in this project, that the original work is my own except as specified in the references and acknowledgements, and that the original work contained herein have not been undertaken or done by unspecified sources or persons.
+
+\vspace{36pt}
+Signed,
+
+\vspace{60pt}
+\rule{70mm}{0.4pt}\par
+\StudentName\par
+
+
+
+% Abstract (one page at most: purpose, scope, methodology, results, conclusion)
+\UTPPrelimChapter{ABSTRACT}
+% TODO: Write the abstract.
+
+% Acknowledgements (one page at most)
+\UTPPrelimChapter{ACKNOWLEDGEMENTS}
+% TODO: Write the acknowledgements, naming the supervisor and other contributors.
+
+% Table of Contents
+\clearpage
+\tableofcontents
+
+% List of Figures
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{LIST OF FIGURES}
+\listoffigures
+
+% List of Tables
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{LIST OF TABLES}
+\listoftables
+
+% Abbreviations and Nomenclatures
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{ABBREVIATIONS AND NOMENCLATURES}
+\UTPListHeading{ABBREVIATIONS AND NOMENCLATURES}
+
+
+% TODO: Keep the abbreviations in alphabetical order.
+\UTPListSubheading{Abbreviations}
+\begin{longtable}{@{}p{3.6cm}p{10.4cm}@{}}
+\AbbrevEntry{FNSPID}{Financial News and Stock Price Integration Dataset}
+\AbbrevEntry{FYP}{Final Year Project}
+\AbbrevEntry{LSTM}{Long Short-Term Memory}
+\AbbrevEntry{RMSE}{Root Mean Square Error}
+\AbbrevEntry{RSI}{Relative Strength Index}
+\AbbrevEntry{UTP}{Universiti Teknologi PETRONAS}
+\end{longtable}
+
+% TODO: List the symbols used in equations. Delete this block if there are none.
+\UTPListSubheading{Nomenclatures}
+\begin{longtable}{@{}p{3.6cm}p{10.4cm}@{}}
+\AbbrevEntry{$T$}{Trading day a headline is assigned to}
+\AbbrevEntry{$h$}{Prediction horizon in trading days}
+\end{longtable}
+
+% ------------------------------------------------------------
+% MAIN MATTER: Arabic numerals, bottom-centred
+% ------------------------------------------------------------
+\clearpage
+\pagenumbering{arabic}
+
+
+\input{chapters/01_introduction}
+\input{chapters/02_literature_review}
+\input{chapters/03_methodology}
+\input{chapters/04_results_discussion}
+\input{chapters/05_conclusion}
+
+% ------------------------------------------------------------
+% REFERENCES
+% ------------------------------------------------------------
+\clearpage
+\phantomsection
+\chapter*{REFERENCES}
+\addcontentsline{toc}{chapter}{REFERENCES}
+% Prints every entry cited with \parencite / \textcite (APA 7).
+\printbibliography[heading=none]
+
+% ------------------------------------------------------------
+% APPENDICES
+% ------------------------------------------------------------
+\StartAppendices
+
+
+\input{chapters/appendices}
+
+\end{document}

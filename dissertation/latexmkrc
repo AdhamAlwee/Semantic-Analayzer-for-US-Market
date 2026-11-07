@@ -1,0 +1,4 @@
+# Build with `latexmk` from this folder. All output, including the PDFs, goes to build/.
+@default_files = ('main.tex', 'technical_paper.tex');
+$pdf_mode = 5;  # XeLaTeX, required for Times New Roman
+$out_dir = 'build';

@@ -1,0 +1,206 @@
+% UTP FYP technical paper. Layout comes from reference/UTP-FYP-Technical-Paper-Template.tex
+% (UTP FYP Guidelines v7.0, Sections 5.9 and 6.2, Appendix 10-1). Limit: 6 pages, one column,
+% IEEE references, and every reference listed must be cited in the text (and vice versa).
+% Build from this folder with `latexmk`. The engine must be XeLaTeX; the PDF goes to build/.
+
+\documentclass[a4paper,11pt]{article}
+
+% ------------------------------------------------------------
+% FONT SETUP
+% ------------------------------------------------------------
+% Guideline 6.2(c): Times New Roman 11 (or Arial 10).
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{newtxtext,newtxmath}
+\else
+  \usepackage{fontspec}
+  \IfFontExistsTF{Times New Roman}{%
+    \setmainfont{Times New Roman}%
+  }{%
+    \IfFontExistsTF{Tinos}{%
+      \setmainfont{Tinos}%
+    }{%
+      \setmainfont{Nimbus Roman}%
+    }%
+  }
+  \usepackage{unicode-math}
+  \IfFontExistsTF{Times New Roman}{%
+    \setmathfont{XITSMath-Regular.otf}%
+  }{}
+\fi
+
+% ------------------------------------------------------------
+% CORE PACKAGES
+% ------------------------------------------------------------
+% Guideline 6.2(d): 1 in (2.5 cm) margins on all sides.
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{graphicx}
+\graphicspath{{figures/}{../results/}}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{etoolbox}
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref}
+
+% ------------------------------------------------------------
+% IEEE REFERENCES
+% ------------------------------------------------------------
+% Reads references.bib beside this .tex file.
+% Use \cite{key} in the text, which gives [1].
+\usepackage[style=ieee,backend=biber]{biblatex}
+\addbibresource{references.bib}
+
+% ------------------------------------------------------------
+% PAPER METADATA
+% ------------------------------------------------------------
+% TODO: Replace these fields. The title block reads from them.
+% The title should be less than 15 words.
+\newcommand{\PaperTitle}{FinBERT News Sentiment for Stock Price Movement Prediction in the US Market}
+\newcommand{\WriterName}{Mas Hairul Adham Bin Alwee}
+\newcommand{\CoWriterName}{Nurul Aida Binti Osman}
+\newcommand{\AffiliationOne}{TODO Department, Universiti Teknologi PETRONAS, 32610 Bandar Seri Iskandar, Perak, Malaysia}
+\newcommand{\CorrespondingEmail}{TODO}
+
+% ------------------------------------------------------------
+% BODY SPACING AND PARAGRAPH STYLE
+% ------------------------------------------------------------
+% 1.5 spacing, justified, flush-left paragraphs with one blank line between.
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{11pt plus 2pt minus 1pt}
+\raggedbottom
+
+% Tables and figures: single spacing.
+\AtBeginEnvironment{table}{\singlespacing\setlength{\parskip}{0pt}}
+\AtBeginEnvironment{figure}{\singlespacing\setlength{\parskip}{0pt}}
+
+\setlist{topsep=0pt, parsep=0pt, itemsep=0pt, partopsep=0pt}
+
+% ------------------------------------------------------------
+% PAGINATION
+% ------------------------------------------------------------
+\pagestyle{plain}
+
+% ------------------------------------------------------------
+% HEADING LEVELS
+% ------------------------------------------------------------
+% Appendix 10-1 uses unnumbered headings, at most three levels:
+%   \section       HEADING (bold, uppercase)
+%   \subsection    Subheading (bold)
+%   \subsubsection Subheading (bold italic)
+\setcounter{secnumdepth}{0}
+
+\titleformat{\section}
+  {\normalfont\bfseries\normalsize}
+  {}
+  {0pt}
+  {\MakeUppercase}
+\titlespacing*{\section}{0pt}{12pt}{0pt}
+
+\titleformat{\subsection}
+  {\normalfont\bfseries\normalsize}
+  {}
+  {0pt}
+  {}
+\titlespacing*{\subsection}{0pt}{12pt}{0pt}
+
+\titleformat{\subsubsection}
+  {\normalfont\bfseries\itshape\normalsize}
+  {}
+  {0pt}
+  {}
+\titlespacing*{\subsubsection}{0pt}{12pt}{0pt}
+
+% ------------------------------------------------------------
+% FIGURES AND TABLES
+% ------------------------------------------------------------
+% "Table 1 Title" above tables (11 pt) and "Figure 1 Title" below
+% figures (10 pt legend), bold label, no colon.
+\DeclareCaptionFont{tenpt}{\fontsize{10pt}{12pt}\selectfont}
+\captionsetup{labelfont=bf,labelsep=space,justification=centering,singlelinecheck=true}
+\captionsetup[table]{position=above,skip=4pt}
+\captionsetup[figure]{position=below,font=tenpt,skip=6pt}
+
+% Optional thin border around an inserted image:
+%   \FramedGraphic{width=0.75\textwidth}{assets/my-image.png}
+\newcommand{\FramedGraphic}[2]{%
+  \setlength{\fboxsep}{0pt}%
+  \setlength{\fboxrule}{0.5pt}%
+  \fbox{\includegraphics[#1]{#2}}%
+}
+
+% Table column type: left-aligned, stretches to fill the table width.
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+% ============================================================
+% DOCUMENT START
+% ============================================================
+\begin{document}
+
+% ------------------------------------------------------------
+% TITLE BLOCK
+% ------------------------------------------------------------
+% For more authors/affiliations, add \textsuperscript{2}, {3}, ... after
+% each name and one \textsuperscript{n}Affiliation line per number.
+\begin{center}
+\singlespacing
+{\bfseries \PaperTitle\par}
+\vspace{6pt}
+{\bfseries \WriterName\textsuperscript{1}, \CoWriterName\textsuperscript{1}\par}
+\vspace{6pt}
+\textsuperscript{1}\AffiliationOne\par
+\vspace{6pt}
+Corresponding email: \CorrespondingEmail\par
+\end{center}
+
+
+% ------------------------------------------------------------
+% ABSTRACT (single spacing, 11 pt, no citations, < 300 words)
+% ------------------------------------------------------------
+\vspace{12pt}
+{\bfseries Abstract\par}
+{\singlespacing
+% TODO: Write the abstract (less than 300 words, no citations).
+\par}
+
+\vspace{6pt}
+% TODO: Choose 6 keywords that do not repeat words from the title, separated by semicolons.
+\textbf{\textit{Keywords}}\quad \textit{TODO}
+
+\section{Introduction}
+% TODO
+
+\section{Literature Review}
+% TODO
+
+\section{Methodology}
+% TODO
+
+\section{Results}
+% TODO
+
+\section{Discussion}
+% TODO
+
+\section{Conclusion}
+% TODO
+
+\section{Acknowledgment}
+% TODO
+
+% Prints every entry cited with \cite{...}, numbered in citation order.
+\section{References}
+{\singlespacing
+\printbibliography[heading=none]
+\par}
+
+\end{document}
