@@ -86,7 +86,8 @@ python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct
 ### 3.3 Daily sentiment features (`src/news_sentiment.py`)
 
 - FinBERT scores every headline.
-- Each headline is assigned to a trading day. Anything published at or after the 4 pm US close counts toward the next day, so the model never sees news before it is published.
+- Each headline is assigned to a trading day. Anything published at or after the 4 pm US close counts toward the next day.
+- **Limitation:** 99.8% of FNSPID timestamps are exactly midnight UTC, so the real publication time is unknown and a headline dated D goes to day D. A headline published after D's close can therefore enter D's features. Section 6a tests this.
 - Features per stock per day:
   - average sentiment
   - how much sentiment varies within the day
@@ -218,6 +219,24 @@ On the same day, different outlets' sentiment for the same stock correlates at o
 ### Ablation by source
 
 The XGBoost ablation was run separately with Nasdaq and with Benzinga sentiment, tested on 2020. No gain is significant, because the test window is only the first half of 2020.
+
+---
+
+## 6a. Robustness: sentiment lagged by one day
+
+**Code:** `src/lag_robustness.py` → `results/lag_robustness/`
+
+The experiments were repeated with every sentiment feature on day t taken from day t−1. Price-only models are identical to the main experiment.
+
+| Model | Same-day gain at 1d / 3d / 5d | Lagged gain at 1d / 3d / 5d | Significant when lagged? |
+|---|---|---|---|
+| XGBoost | +0.005 / +0.013 / +0.014 | +0.001 / +0.012 / 0.000 | No (pooled q ≥ 0.49) |
+| Class-weighted LSTM | 0.000 / +0.018 / +0.017 | −0.004 / +0.009 / +0.018 | No (pooled q ≥ 0.61) |
+
+- **The main conclusion holds:** no reliable gain from sentiment.
+- **FinBERT's lead in Section 5 does not hold.** Lagged, DistilRoBERTa leads at 3 days (+0.017) and FinBERT's 5-day gain is zero. Six of the seven models, including VADER, gain +0.011 to +0.017 at 3 days, so that gain may not come from the sentiment scores.
+- **Market agreement on the following day's return** (close of T+1 to close of T+2) is about 50%: Benzinga 49.9%, Nasdaq 50.4%.
+- The class-weighted LSTM's RMSE is significantly worse with sentiment at 5 days, with or without the lag.
 
 ---
 

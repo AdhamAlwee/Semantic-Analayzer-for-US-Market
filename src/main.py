@@ -7,6 +7,7 @@ Run the full FYP II pipeline end to end.
   4. model_comparison     FinBERT vs other non-agentic models on labelled text
   5. sentiment_downstream the same models as sentiment sources for prediction
   6. source_comparison    FinBERT consistency and predictive value per news outlet
+  7. lag_robustness       the main experiments with sentiment lagged by one trading day
 
 Each step caches its outputs, so re-running skips work that is already done
 (except the experiments themselves, which are cheap to repeat).
@@ -24,7 +25,7 @@ project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-STEPS = ["data", "sentiment", "ablation", "model_comparison", "downstream", "sources"]
+STEPS = ["data", "sentiment", "ablation", "model_comparison", "downstream", "sources", "robustness"]
 
 
 def main() -> None:
@@ -59,6 +60,13 @@ def main() -> None:
         from src.source_comparison import run_source_comparison
 
         run_source_comparison()
+    if "robustness" in args.steps:
+        from src.lag_robustness import run_lagged_ablation, run_lagged_agreement, run_lagged_downstream
+
+        run_lagged_agreement()
+        run_lagged_ablation("xgboost")
+        run_lagged_ablation("lstm_balanced")
+        run_lagged_downstream()
 
 
 if __name__ == "__main__":
