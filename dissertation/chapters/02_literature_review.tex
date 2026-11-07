@@ -1,19 +1,61 @@
 \chapter{LITERATURE REVIEW}
 
+This chapter reviews the role of sentiment in stock prediction, the language models and datasets used for financial sentiment analysis, and the research gaps addressed by this project.
+
 \section{Stock Market Prediction and the Role of Sentiment}
-% TODO
+The efficient market hypothesis holds that publicly available information, including news, is rapidly incorporated into asset prices \parencite{fama1970efficient}. This would limit the value of any single public signal, such as news sentiment. In practice, however, the incorporation of information may be neither instantaneous nor complete, and short-term reactions to news events may leave a window in which sentiment carries predictive value at short horizons. % TODO: Cite a behavioural finance source for this claim.
+Industry surveys report sentiment among the most widely adopted categories of alternative data, but describe it as one input to be combined with prices, fundamentals or other data \parencite{aima2024casting}. The same framing was adopted in this project, in which sentiment was treated as a candidate feature to be tested for marginal predictive value and not as a standalone trading signal.
 
 \section{FinBERT and Domain-Specific Language Models}
-% TODO
+FinBERT is a BERT-based language model trained on financial text and fine-tuned for sentiment classification. It was developed because general sentiment models perform poorly on financial text, owing to domain-specific vocabulary and context-dependent polarity \parencite{araci2019finbert,yang2020finbert}. The most widely used benchmark is the Financial PhraseBank, a dataset of financial news sentences labelled as positive, negative or neutral by annotators with a financial market background, according to how a phrase might be expected to influence a stock price \parencite{malo2014good}. FinBERT and its variants have become the standard baseline against which newer methods, including prompted LLMs, are compared.
 
 \section{Sentiment-Augmented Stock Prediction Models}
-% TODO
+Recent studies have combined FinBERT sentiment with sequential and tree-based prediction models. A FinBERT-LSTM model was reported to improve on price-only LSTM and DNN baselines by weighting news according to whether it was market-wide, industry-specific or stock-specific \parencite{gu2024predicting}. Other work has applied FinBERT to social-media commentary, feeding the sentiment of Stocktwits posts into an ensemble Support Vector Machine for movement prediction \parencite{pmc2023stocktwits}. More recently, FinBERT sentiment has been combined with technical indicators in a gradient-boosted tree framework with SHAP-based explainability \parencite{mathematics2025stock}, and group-wise SHAP analysis has been used to assess the joint contribution of news keywords and technical indicators \parencite{arxiv2025groupshap}. These studies establish FinBERT-augmented prediction as an active research direction, but two gaps recur: evaluation on a single news source, and reported performance without a matched price-only baseline.
 
 \section{General-Purpose LLMs versus Domain-Specific Models}
-% TODO
+A parallel line of work has compared FinBERT with general-purpose LLMs on financial sentiment classification. As summarised in Table~\ref{tab:lit-llm}, the results are inconsistent and do not uniformly favour either approach.
+
+% TODO: Confirm that each row of this table is matched to the correct source.
+\begin{longtable}{@{}P{4.3cm}P{3.6cm}P{2.3cm}P{3.0cm}@{}}
+\caption{Reported FinBERT and General LLM Sentiment Accuracy}
+\label{tab:lit-llm}\\
+\toprule
+\textbf{Study} & \textbf{Models compared} & \textbf{FinBERT} & \textbf{General LLM} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Study} & \textbf{Models compared} & \textbf{FinBERT} & \textbf{General LLM} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+Financial-sentiment benchmark \parencite{fatouros2023transforming} & FinBERT and prompted ChatGPT & 56.1\% & Higher across all four prompts \\
+NGX All-Share Index \parencite{ai2024innovative} & FinBERT, GPT-4 and logistic regression & 63.3\% & 54.2\% \\
+Financial-sentiment benchmark of 5,843 sentences \parencite{vidhya2025finetuning} & FinBERT and fine-tuned GPT-4o mini & 75.8\% & 76.5\% \\
+Five news sources \parencite{electronics2025comparative} & FinBERT and GPT-2 & 32.2--75.6\%, by source & 34.4--65.5\%, by source \\
+Market-reaction classification \parencite{arxiv2024optimizing} & FinBERT, DistilRoBERTa and zero-shot GPT-4 & Comparable to GPT-4 & Marginal improvement despite far more parameters \\
+\end{longtable}
+
+Three observations follow from this comparison. First, general LLMs have outperformed FinBERT when carefully prompted or fine-tuned, but not consistently when used with a fixed prompt. Second, the accuracy of FinBERT has been highly dependent on the source, varying by more than 40 percentage points across news outlets in a single study, which motivated the multi-source evaluation in this project. Third, several of the studies favouring general LLMs relied on proprietary, API-based models, which are costly at the scale of a multi-year backtest and are not fully reproducible, as the underlying model may change.
+
+For these reasons, and following the guidance of the supervisor, FinBERT was not benchmarked against proprietary or agentic AI systems. A comparison was instead made with open, versioned, non-agentic models, including a small LLM used with one fixed prompt, so that every checkpoint could be reproduced.
 
 \section{Financial Sentiment and Stock Price Datasets}
-% TODO
+The Financial PhraseBank remains the standard labelled dataset for financial sentiment classification \parencite{malo2014good}. For paired news and price data, the Financial News and Stock Price Integration Dataset (FNSPID) is a large public resource, combining approximately 29.7 million daily stock price records with 15.7 million time-aligned news articles for 4,775 S\&P~500 companies between 1999 and 2023. Its authors reported that sentiment information provided a modest additional improvement in model performance \parencite{dong2024fnspid}.
 
 \section{Research Gap}
-% TODO
+The reviewed literature shows that FinBERT-augmented stock prediction is technically viable and well studied, and that the choice between a domain-specific model and a general-purpose LLM remains unsettled. What existing studies do not consistently provide is a controlled comparison of FinBERT across several news sources within one study, and a rigorous ablation that isolates the contribution of sentiment over a matched price-only baseline across several horizons. As shown in Table~\ref{tab:lit-gap}, this project was designed to address both gaps.
+
+\begin{utptable}{Comparison of Related Work with This Project}
+\label{tab:lit-gap}
+\begin{tabular}{@{}P{6.2cm}P{3.2cm}P{1.8cm}P{1.8cm}@{}}
+\toprule
+\textbf{Related work} & \textbf{Sentiment model} & \textbf{Multiple sources} & \textbf{Price-only ablation} \\
+\midrule
+FinBERT-LSTM \parencite{gu2024predicting} & FinBERT & No & Partial \\
+FinBERT, GPT-4 and logistic regression \parencite{ai2024innovative} & FinBERT and GPT-4 & No & No \\
+FinBERT, XGBoost and SHAP \parencite{mathematics2025stock} & FinBERT & No & No \\
+This project & FinBERT, with six comparison models & Yes & Yes \\
+\bottomrule
+\end{tabular}
+\end{utptable}

@@ -49,8 +49,11 @@
 \usepackage{fancyhdr}
 \usepackage{graphicx}
 \graphicspath{{figures/}{../results/}}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
 \usepackage{booktabs}
 \usepackage{array}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
 \usepackage{longtable}
 \usepackage{tabularx}
 \usepackage{float}
@@ -73,6 +76,7 @@
 \DeclareLanguageMapping{english}{english-apa}
 \addbibresource{references.bib}
 \setlength\bibhang{0.5in}
+\AtBeginBibliography{\sloppy}
 
 % ------------------------------------------------------------
 % STUDENT / REPORT METADATA
@@ -375,7 +379,9 @@ Signed,
 
 % Abstract (one page at most: purpose, scope, methodology, results, conclusion)
 \UTPPrelimChapter{ABSTRACT}
-% TODO: Write the abstract.
+Financial news sentiment is widely used to supplement stock price prediction, but its contribution is often reported without a matched price-only baseline or across a single news source. This project measured the contribution of FinBERT sentiment to stock movement prediction in the US market. A total of 34,810 FNSPID headlines from 2018 to 2023 were scored for five large-capitalisation stocks. FinBERT was compared with six other non-agentic sentiment models on labelled text, and on the prediction task. XGBoost and LSTM models were trained with and without sentiment features under identical settings and tested by walk-forward evaluation on 2021--2023, at horizons of one, three and five trading days. Differences were tested with a paired block bootstrap and corrected for multiple comparisons.
+
+Sentiment did not significantly improve XGBoost or a class-weighted LSTM, whose pooled gains in macro-F1 were at most 0.023. A significant gain from a plain LSTM was shown to be an artifact of class imbalance. All models remained close to chance, and none improved on a zero-return forecast when the stocks were pooled. As publication times were unavailable for 99.8\% of the headlines, the experiments were repeated with sentiment lagged by one day, and the conclusion was unchanged. FinBERT had the largest same-day gains at three and five days, but this ranking did not hold after lagging, and no differences between sentiment models were significant. Market agreement varied across outlets when the publication day was included, but fell to about 50\% for Nasdaq and Benzinga on later returns. These findings are consistent with the efficient market hypothesis, and suggest that headline sentiment reflects price moves as they occur and provides no reliable information about later moves.
 
 % Acknowledgements (one page at most)
 \UTPPrelimChapter{ACKNOWLEDGEMENTS}
@@ -407,9 +413,12 @@ Signed,
 % TODO: Keep the abbreviations in alphabetical order.
 \UTPListSubheading{Abbreviations}
 \begin{longtable}{@{}p{3.6cm}p{10.4cm}@{}}
+\AbbrevEntry{CRISP-DM}{Cross-Industry Standard Process for Data Mining}
 \AbbrevEntry{FNSPID}{Financial News and Stock Price Integration Dataset}
 \AbbrevEntry{FYP}{Final Year Project}
+\AbbrevEntry{LLM}{Large Language Model}
 \AbbrevEntry{LSTM}{Long Short-Term Memory}
+\AbbrevEntry{NLP}{Natural Language Processing}
 \AbbrevEntry{RMSE}{Root Mean Square Error}
 \AbbrevEntry{RSI}{Relative Strength Index}
 \AbbrevEntry{UTP}{Universiti Teknologi PETRONAS}
@@ -418,8 +427,17 @@ Signed,
 % TODO: List the symbols used in equations. Delete this block if there are none.
 \UTPListSubheading{Nomenclatures}
 \begin{longtable}{@{}p{3.6cm}p{10.4cm}@{}}
-\AbbrevEntry{$T$}{Trading day a headline is assigned to}
+\AbbrevEntry{$b$}{Stable band: 33rd percentile of the absolute forward return in the training window}
+\AbbrevEntry{$D_t$}{Sentiment score decayed across days, on day $t$}
 \AbbrevEntry{$h$}{Prediction horizon in trading days}
+\AbbrevEntry{$n_t$}{Number of headlines on day $t$}
+\AbbrevEntry{$q$}{Benjamini--Hochberg adjusted $p$-value}
+\AbbrevEntry{$r_{t,h}$}{Forward return from day $t$ over horizon $h$}
+\AbbrevEntry{$s_i$}{Signed sentiment score of headline $i$}
+\AbbrevEntry{$\bar{s}_t$}{Mean headline score on day $t$}
+\AbbrevEntry{$T$}{Trading day a headline is assigned to}
+\AbbrevEntry{$w$}{Daily decay factor}
+\AbbrevEntry{$y_{t,h}$}{Movement class on day $t$ at horizon $h$}
 \end{longtable}
 
 % ------------------------------------------------------------

@@ -1,7 +1,25 @@
 \chapter{CONCLUSION AND RECOMMENDATION}
 
 \section{Conclusion}
-% TODO
+This project examined whether FinBERT sentiment from financial news headlines improves stock price movement prediction in the US market beyond price and volume features. The four objectives were addressed as follows.
+
+For the first objective, 34,810 FNSPID headlines and the corresponding daily prices were collected for five large-capitalisation stocks from 2018 to 2023. Coverage analysis led to a change of the study stocks, and it showed that the outlets other than Nasdaq were available only until June 2020.
+
+For the second objective, FinBERT was implemented and validated on labelled text, where it achieved a macro-F1 of 0.668 on a dataset not used to train any of the models. Across outlets, its sentiment agreed with the price direction on 53--72\% of non-neutral INTC headlines over a two-day window that included the publication day. This agreement fell to about 50\% for Nasdaq and Benzinga once the publication day and the following day were excluded. Daily sentiment from Nasdaq and Benzinga correlated at only 0.13, so the choice of source changed the signal substantially.
+
+For the third objective, XGBoost and LSTM models were compared with and without sentiment using matched settings and walk-forward testing. Sentiment did not produce a statistically significant gain in XGBoost or the class-weighted LSTM when the stocks were pooled, and this conclusion was unchanged when the sentiment was lagged by one day. The significant gain of the plain LSTM was shown to be an artifact of class imbalance.
+
+For the fourth objective, the models were evaluated at horizons of one, three and five trading days. Macro-F1 remained between 0.291 and 0.352 at all horizons, close to chance, and no model improved on a zero-return forecast when the stocks were pooled.
+
+The findings are consistent with the efficient market hypothesis. Sentiment was associated with price moves around publication but provided no reliable information about later moves. The project also showed the value of testing a performance gain before accepting it, since a significant result from the plain LSTM and an apparent difference between news outlets both failed under closer examination.
 
 \section{Recommendation}
-% TODO
+The following recommendations are made for future work:
+\begin{itemize}
+\item a news source with exact publication times should be used, so that news can be aligned with the market close and intraday effects can be studied;
+\item the contribution of the headline-count feature should be tested separately from the sentiment scores, as similar lagged gains were observed for very different sentiment models;
+\item the source comparison should be repeated with a dataset in which several outlets are available for a longer period, as the second part of this comparison was limited to about five months of testing;
+\item more stocks, including smaller companies with less news coverage, should be tested, as prices may absorb news more slowly for such companies;
+\item full article text should be evaluated in place of headlines; and
+\item a larger open LLM, and a fine-tuned FinBERT, could be included in the comparison of sentiment models.
+\end{itemize}

@@ -1,13 +1,29 @@
 \chapter{INTRODUCTION}
 
 \section{Background of Study}
-% TODO
+Stock prices are shaped by two general types of information: quantitative signals derived from historical prices and volumes, and qualitative signals obtained from news, earnings reports and public opinion. Price prediction has traditionally relied on the quantitative signals, using methods that range from classical time-series techniques to deep learning networks such as the Long Short-Term Memory (LSTM). This reliance is a limitation, as financial markets respond to new information and financial news is one of the main channels through which investors receive it.
+
+Natural language processing has been widely applied to extract sentiment from financial text. Early efforts relied on general sentiment word lists and classifiers, which performed poorly because many words carry different or even opposite meanings in a financial context. FinBERT, a BERT language model adapted to financial text, was developed to address this problem and has become a benchmark for financial sentiment classification \parencite{araci2019finbert}.
+
+A similar trend has been observed among financial institutions. Market research reported that the share of hedge funds and investment firms using alternative data, such as news and social sentiment data, rose from 62\% in 2023 to 90\% two years later \parencite{lowenstein2025alternative}. Sentiment is nevertheless generally treated as one input among several rather than as a sufficient signal \parencite{aima2024casting}. In addition, the arrival of general-purpose large language models (LLMs), which can classify text without domain-specific training, has raised the question of whether a specialised model such as FinBERT is still required.
 
 \section{Problem Statement}
-% TODO
+Traditional stock prediction approaches use historical price and volume data as their main inputs and do not make use of the sentiment contained in news. Generic sentiment tools are poorly suited to this task, because financial language contains domain-specific terms and unconventional expressions of sentiment. FinBERT addresses this limitation and has been used in stock prediction, but the reported results vary widely with the source of information, the type of model and the evaluation method.
+
+Two further gaps motivated this project. First, few studies have tested the consistency of FinBERT across several financial news sources within a single study, although accuracy has been reported to range from 32\% to 76\% depending on the source \parencite{electronics2025comparative}. Second, many studies report the performance of a sentiment-augmented model without evaluating a price-only model under the same conditions, so the contribution of sentiment cannot be isolated.
+
+This project addressed these gaps by examining FinBERT sentiment across US financial news outlets, and by applying an ablation design to measure the contribution of sentiment features over a matched price-only baseline at several prediction horizons.
 
 \section{Objectives}
-% TODO
+The objectives of this project were:
+\begin{enumerate}
+\item to collect and preprocess financial news from multiple US financial news sources, together with the corresponding historical stock price data;
+\item to implement FinBERT for financial news sentiment classification and to evaluate the consistency of its classification across the news sources collected;
+\item to develop sentiment-augmented stock price movement prediction models and to compare them with price-only baseline models, isolating the marginal contribution of sentiment through an ablation study; and
+\item to evaluate the models using accuracy, precision, recall, F1-score and RMSE, and to analyse how performance changes across prediction horizons of one day, three days and one week.
+\end{enumerate}
 
 \section{Scope of Study}
-% TODO
+This project was limited to the US equity market, using five large-capitalisation stocks with dense news coverage in FNSPID between 2018 and 2023. Sentiment was classified from news headlines using a pretrained FinBERT model, which was validated on the Financial PhraseBank and compared with six other non-agentic sentiment models. Price-only and sentiment-augmented models were developed using a sequential deep learning architecture and a gradient-boosted tree architecture.
+
+The following were outside the scope of the project: fine-tuning FinBERT or training a new domain-specific model; live trading, including transaction costs and latency; non-US markets, other asset classes and social-media sentiment sources; and benchmarking against proprietary or agentic AI systems.

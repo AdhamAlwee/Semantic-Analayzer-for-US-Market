@@ -1,16 +1,304 @@
 \chapter{RESULTS AND DISCUSSION}
 
+This chapter presents the results in the order of the experiments described in Chapter~3. The sentiment models are first compared on labelled text. The ablation study, the sentiment-model comparison on prediction and the news-source comparison are then reported, and the findings are discussed in the final section.
+
 \section{Sentiment Model Validation on Labelled Text}
-% TODO
+\label{sec:text-results}
+The performance of the seven sentiment models on the two labelled datasets is shown in Table~\ref{tab:text-results}. FinBERT achieved a macro-F1 of 0.963 on the Financial PhraseBank, which confirmed that the model had been loaded and applied correctly. However, this score was inflated, because the model was trained on that dataset.
+
+\begin{utptable}{Performance of the Sentiment Models on Labelled Text}
+\label{tab:text-results}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Params} & \multicolumn{2}{c}{\textbf{PhraseBank}} & \multicolumn{2}{c}{\textbf{Twitter}} & \textbf{ms per} \\
+ & \textbf{(M)} & \textbf{Acc.} & \textbf{F1} & \textbf{Acc.} & \textbf{F1} & \textbf{headline} \\
+\midrule
+DistilRoBERTa-fin & 82 & 0.997* & 0.996* & 0.750 & 0.706 & 1.3 \\
+FinBERT & 110 & 0.972* & 0.963* & 0.725 & 0.668 & 2.3 \\
+FinBERT-tone & 110 & 0.917 & 0.897 & 0.748 & 0.661 & 2.4 \\
+RoBERTa-Twitter & 125 & 0.715 & 0.575 & 0.703 & 0.613 & 2.6 \\
+Qwen2.5-1.5B & 1,544 & 0.803 & 0.816 & 0.549 & 0.569 & 35.4 \\
+BART-MNLI & 407 & 0.547 & 0.605 & 0.442 & 0.458 & 36.9 \\
+VADER & -- & 0.571 & 0.487 & 0.494 & 0.447 & 0.04 \\
+\bottomrule
+\multicolumn{7}{@{}l}{\footnotesize * Trained on this dataset, so the score is inflated. Speed was measured on the Twitter dataset.}
+\end{tabular}
+\end{utptable}
+
+On the Twitter dataset, which none of the models was trained on, the three finance-domain models obtained the highest macro-F1, between 0.661 and 0.706. The most accurate model was DistilRoBERTa-fin, with a macro-F1 0.038 higher than that of FinBERT. A larger general model did not perform better: Qwen2.5-1.5B has about 14 times as many parameters as FinBERT, yet its macro-F1 was 0.099 lower and it was about 15 times slower. VADER obtained the lowest macro-F1 of 0.447.
+
+The per-class results in Table~\ref{tab:per-class} explain these differences. Neutral headlines formed the largest class, with 1,566 of the 2,388 examples. BART-MNLI and Qwen2.5-1.5B recalled only 18\% and 35\% of these headlines respectively, as they assigned most text to the positive or negative class. FinBERT was comparatively balanced, and it recalled 76\% of the negative headlines.
+
+\begin{utptable}{F1 by Class on the Twitter Dataset}
+\label{tab:per-class}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Negative} & \textbf{Neutral} & \textbf{Positive} \\
+\midrule
+DistilRoBERTa-fin & 0.65 & 0.81 & 0.65 \\
+FinBERT & 0.60 & 0.80 & 0.60 \\
+FinBERT-tone & 0.54 & 0.82 & 0.62 \\
+RoBERTa-Twitter & 0.53 & 0.79 & 0.52 \\
+Qwen2.5-1.5B & 0.66 & 0.51 & 0.54 \\
+BART-MNLI & 0.55 & 0.30 & 0.52 \\
+VADER & 0.40 & 0.59 & 0.35 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+The models also differed substantially on the FNSPID headlines, for which no human labels were available, as shown in Table~\ref{tab:label-mix}. The agreement of FinBERT with the other models ranged from a Cohen's kappa of 0.60 with DistilRoBERTa-fin to 0.02 with VADER. Qwen2.5-1.5B and BART-MNLI labelled more than 60\% of the headlines as positive, compared with 20.9\% for FinBERT, whereas VADER labelled 98.5\% as neutral. The choice of sentiment model therefore changed the input signal considerably, which motivated the comparison on the prediction task in Section~\ref{sec:downstream-results}.
+
+\begin{utptable}{Label Share and Agreement with FinBERT on 34,810 FNSPID Headlines}
+\label{tab:label-mix}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Negative (\%)} & \textbf{Neutral (\%)} & \textbf{Positive (\%)} & \textbf{Kappa} \\
+\midrule
+FinBERT & 16.6 & 62.5 & 20.9 & -- \\
+DistilRoBERTa-fin & 15.3 & 59.6 & 25.1 & 0.60 \\
+FinBERT-tone & 13.5 & 58.6 & 27.9 & 0.46 \\
+RoBERTa-Twitter & 9.2 & 75.5 & 15.3 & 0.33 \\
+Qwen2.5-1.5B & 15.8 & 22.4 & 61.8 & 0.25 \\
+BART-MNLI & 23.8 & 11.9 & 64.3 & 0.21 \\
+VADER & 0.4 & 98.5 & 1.1 & 0.02 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
 
 \section{Ablation Study}
-% TODO
+\label{sec:ablation-results}
+
+\subsection{Overall Predictive Performance}
+Table~\ref{tab:ablation-f1} presents the macro-F1 of each model on the 2021--2023 test years, with all five stocks pooled. All values lay between 0.291 and 0.352, close to the value of about 0.33 expected from random guessing across three balanced classes.
+
+\begin{utptable}{Macro-F1 by Model and Feature Set, All Stocks Pooled}
+\label{tab:ablation-f1}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Horizon} & \textbf{Price} & \textbf{Price +} & \textbf{Price + sentiment} \\
+ & & & \textbf{sentiment} & \textbf{+ company} \\
+\midrule
+XGBoost & 1 day & 0.347 & 0.352 & 0.351 \\
+ & 3 days & 0.318 & 0.331 & 0.328 \\
+ & 5 days & 0.335 & 0.349 & 0.344 \\
+\midrule
+LSTM & 1 day & 0.323 & 0.348 & 0.322 \\
+ & 3 days & 0.291 & 0.324 & 0.303 \\
+ & 5 days & 0.302 & 0.335 & 0.305 \\
+\midrule
+Class-weighted LSTM & 1 day & 0.345 & 0.344 & 0.341 \\
+ & 3 days & 0.327 & 0.345 & 0.337 \\
+ & 5 days & 0.315 & 0.332 & 0.338 \\
+\midrule
+Majority class baseline & 1 day & \multicolumn{3}{c}{0.246} \\
+ & 3 days & \multicolumn{3}{c}{0.211} \\
+ & 5 days & \multicolumn{3}{c}{0.182} \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+Although every model exceeded the majority-class baseline on macro-F1, this baseline scores poorly on the metric by construction, because it predicts only one class. Accuracy gave a less favourable picture. At three and five days, the accuracy of XGBoost was 33.3--36.8\%, which was below the 36.9--37.6\% obtained by always predicting the most common class. The predictive power of all the models was therefore weak.
+
+The return forecasts were similarly weak, as shown in Table~\ref{tab:rmse}. When all stocks were pooled, no model achieved a lower RMSE than a constant forecast of zero return, at any horizon or with any feature set. The only exceptions for individual stocks were a few LSTM results on MRK and SBUX, which improved on the zero-return forecast by 0.012 or less. Directional accuracy remained close to 50\%.
+
+\begin{utptable}{Return Forecast Performance of the Price + Sentiment Models, All Stocks Pooled}
+\label{tab:rmse}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{Model} & \multicolumn{3}{c}{\textbf{RMSE (\%)}} & \multicolumn{3}{c}{\textbf{Directional accuracy}} \\
+ & \textbf{1 day} & \textbf{3 days} & \textbf{5 days} & \textbf{1 day} & \textbf{3 days} & \textbf{5 days} \\
+\midrule
+XGBoost & 1.923 & 3.386 & 4.336 & 0.491 & 0.512 & 0.521 \\
+LSTM & 1.854 & 3.261 & 4.246 & 0.501 & 0.499 & 0.496 \\
+Class-weighted LSTM & 1.857 & 3.261 & 4.235 & 0.498 & 0.499 & 0.499 \\
+Zero-return forecast & 1.844 & 3.213 & 4.101 & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+\subsection{Effect of Adding Sentiment}
+The change in macro-F1 from adding the sentiment features is shown in Table~\ref{tab:ablation-gain} and, for XGBoost, in Figure~\ref{fig:ablation-xgb}. For XGBoost, sentiment added 0.005 at one day, 0.013 at three days and 0.014 at five days. None of these gains was significant after correction ($q \geq 0.317$), and none of the 36 XGBoost comparisons, including those for individual stocks, reached significance. The gain was positive in 10 of the 15 stock--horizon combinations.
+
+\begin{utptable}{Macro-F1 Gain from Sentiment, All Stocks Pooled}
+\label{tab:ablation-gain}
+\begin{tabular}{@{}llrcr@{}}
+\toprule
+\textbf{Model} & \textbf{Horizon} & \textbf{Change} & \textbf{95\% CI} & \textbf{$q$} \\
+\midrule
+XGBoost & 1 day & +0.005 & $-$0.008 to +0.018 & 0.726 \\
+ & 3 days & +0.013 & $-$0.001 to +0.025 & 0.344 \\
+ & 5 days & +0.014 & +0.002 to +0.027 & 0.317 \\
+\midrule
+LSTM & 1 day & +0.025 & +0.009 to +0.042 & 0.029 \\
+ & 3 days & +0.033 & +0.016 to +0.049 & $<$0.001 \\
+ & 5 days & +0.033 & +0.012 to +0.055 & $<$0.001 \\
+\midrule
+Class-weighted LSTM & 1 day & 0.000 & $-$0.017 to +0.015 & 0.992 \\
+ & 3 days & +0.018 & $-$0.002 to +0.037 & 0.284 \\
+ & 5 days & +0.017 & $-$0.006 to +0.039 & 0.391 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+\begin{figure}[htbp]
+\centering
+\FramedGraphic{width=0.98\textwidth}{ablation/xgboost/ablation_delta_f1.png}
+\caption{Change in Macro-F1 from Adding Sentiment to XGBoost, with 95\% Confidence Intervals}
+\label{fig:ablation-xgb}
+\end{figure}
+
+The gains of the plain LSTM were significant, but further analysis showed that they did not reflect useful information. As shown in Table~\ref{tab:lstm-artifact}, the price-only LSTM rarely predicted the down class, doing so on only 7--12\% of test days. Sentiment raised this share to 20--25\%, which improved macro-F1 because that metric penalises a neglected class. However, the precision of the down predictions remained close to the share of days that were actually down. The additional down predictions were therefore no more reliable than chance.
+
+\begin{utptable}{Down-Class Predictions of the Plain LSTM, All Stocks Pooled}
+\label{tab:lstm-artifact}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textbf{Horizon} & \multicolumn{2}{c}{\textbf{Days predicted down (\%)}} & \multicolumn{2}{c}{\textbf{Precision of down}} & \textbf{Actual down} \\
+ & \textbf{Price} & \textbf{+ Sentiment} & \textbf{Price} & \textbf{+ Sentiment} & \textbf{share} \\
+\midrule
+1 day & 12.3 & 22.8 & 0.343 & 0.345 & 0.333 \\
+3 days & 7.3 & 19.8 & 0.292 & 0.318 & 0.329 \\
+5 days & 8.1 & 25.3 & 0.323 & 0.310 & 0.315 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+The class-weighted LSTM was used to test this explanation. Once the price-only network was no longer able to neglect a class, the gains fell to 0.000, 0.018 and 0.017, none of which was significant. This pattern was close to that of XGBoost, so the gains of the plain LSTM were treated as an artifact of class imbalance and not as evidence of predictive value.
+
+Adding sentiment also did not improve the return forecasts. For XGBoost, the change in RMSE was negligible and not significant. For the class-weighted LSTM, the RMSE became significantly worse with sentiment at three days (+0.033, $q = 0.032$) and at five days (+0.110, $q = 0.018$).
+
+The company-specific features did not add further value. In Table~\ref{tab:ablation-f1}, the third feature set generally scored at or below the second, except for the class-weighted LSTM at five days. Company features did produce a significant gain for WFC at three days in both LSTM variants, but this result was isolated and was not repeated for the other stocks.
+
+The importance of the features in XGBoost was consistent with these findings. The average gain of the twenty features was almost uniform, ranging from 2.18 to 2.87, with the decayed sentiment score ranked fifth. No single feature, whether price or sentiment, dominated the predictions, which is the pattern expected when the targets contain little learnable signal.
+
+\subsection{Robustness to Date-Only Timestamps}
+\label{sec:lag-results}
+As explained in Section~\ref{sec:data}, a headline published after the close on day $t$ could enter the features of day $t$. The experiments were therefore repeated with all sentiment features lagged by one trading day, as described in Section~\ref{sec:ablation}. The price-only models were identical to those of the main experiment, so any change was due to the lag alone. The results are presented in Table~\ref{tab:lag-results}.
+
+\begin{utptable}{Change in Macro-F1 from Sentiment Lagged by One Trading Day, All Stocks Pooled}
+\label{tab:lag-results}
+\begin{tabular}{@{}llrrcr@{}}
+\toprule
+\textbf{Model} & \textbf{Horizon} & \textbf{Same-day} & \multicolumn{3}{c}{\textbf{Lagged}} \\
+ & & \textbf{change} & \textbf{Change} & \textbf{95\% CI} & \textbf{$q$} \\
+\midrule
+XGBoost & 1 day & +0.005 & +0.001 & $-$0.011 to +0.014 & 0.930 \\
+ & 3 days & +0.013 & +0.012 & 0.000 to +0.025 & 0.486 \\
+ & 5 days & +0.014 & 0.000 & $-$0.013 to +0.012 & 0.930 \\
+\midrule
+Class-weighted LSTM & 1 day & 0.000 & $-$0.004 & $-$0.020 to +0.012 & 0.820 \\
+ & 3 days & +0.018 & +0.009 & $-$0.010 to +0.028 & 0.684 \\
+ & 5 days & +0.017 & +0.018 & $-$0.005 to +0.041 & 0.607 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+No lagged gain was significant when all stocks were pooled, and the main conclusion was unchanged. The 5-day gain of XGBoost disappeared entirely, whereas that of the class-weighted LSTM remained, so the two models did not agree on the effect at that horizon. The only significant individual gain in macro-F1 was again for WFC at three days with company features in the class-weighted LSTM (+0.078), which was one result among 36 comparisons. The RMSE of the class-weighted LSTM remained significantly worse with sentiment at five days ($q < 0.001$).
+
+These results should not be read as a measurement of the size of the look-ahead effect, as lagging also delays news that was genuinely available before the close. Nevertheless, they show that the conclusion did not depend on the timing of the headlines.
 
 \section{Sentiment Model Comparison on Prediction}
-% TODO
+\label{sec:downstream-results}
+Each sentiment model scored the same 34,810 headlines, and its daily features were passed through the same XGBoost experiment. The results are presented in Table~\ref{tab:downstream} and Figure~\ref{fig:downstream}.
+
+\begin{utptable}{Change in Macro-F1 by Sentiment Model, XGBoost, All Stocks Pooled}
+\label{tab:downstream}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+\textbf{Sentiment model} & \multicolumn{3}{c}{\textbf{Same-day}} & \multicolumn{3}{c}{\textbf{Lagged one day}} & \textbf{Twitter} \\
+ & \textbf{1 day} & \textbf{3 days} & \textbf{5 days} & \textbf{1 day} & \textbf{3 days} & \textbf{5 days} & \textbf{F1} \\
+\midrule
+FinBERT & +0.005 & +0.013 & +0.014 & +0.001 & +0.012 & 0.000 & 0.668 \\
+BART-MNLI & +0.004 & +0.006 & +0.009 & +0.002 & +0.013 & $-$0.006 & 0.458 \\
+Qwen2.5-1.5B & +0.002 & +0.012 & +0.002 & $-$0.003 & +0.005 & +0.005 & 0.569 \\
+RoBERTa-Twitter & +0.010 & +0.010 & 0.000 & $-$0.002 & +0.011 & $-$0.002 & 0.613 \\
+VADER & $-$0.002 & +0.004 & $-$0.002 & +0.002 & +0.011 & +0.003 & 0.447 \\
+DistilRoBERTa-fin & +0.008 & +0.004 & $-$0.002 & $-$0.003 & +0.017 & $-$0.009 & 0.706 \\
+FinBERT-tone & +0.002 & +0.003 & $-$0.003 & +0.002 & +0.012 & $-$0.007 & 0.661 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+No gain from any sentiment model was significant after correction, whether the sentiment was used on the same day (pooled $q \geq 0.648$) or lagged by one day (pooled $q \geq 0.399$). The differences between the models were also small relative to confidence intervals of approximately $\pm 0.013$. The table therefore gives a descriptive ranking and does not establish that any model is superior.
+
+With same-day sentiment, FinBERT produced the largest gains at three and five days, although Qwen2.5-1.5B was almost level at three days. This ranking did not hold when the sentiment was lagged. At three days, DistilRoBERTa-fin then produced the largest gain (+0.017), and at five days the gain of FinBERT fell to zero. The choice of FinBERT was therefore not contradicted, but the results did not show that it was the most useful sentiment model for prediction.
+
+The lagged gains at three days were notably similar across six of the seven models, at between +0.011 and +0.017. This group included VADER, which labelled 98.5\% of the headlines as neutral and agreed with FinBERT at a kappa of only 0.02. A gain that does not depend on the sentiment model may not arise from the sentiment scores themselves. All of the models shared the headline-count feature, which may have contributed to this pattern, but its contribution was not tested separately.
+
+\begin{figure}[htbp]
+\centering
+\FramedGraphic{width=0.98\textwidth}{sentiment_downstream/downstream_delta_f1.png}
+\caption{Change in Macro-F1 by Sentiment Model, with 95\% Confidence Intervals}
+\label{fig:downstream}
+\end{figure}
 
 \section{News Source Comparison}
-% TODO
+\label{sec:source-results}
+The market agreement of FinBERT sentiment by outlet is presented in Table~\ref{tab:source-agreement}. Over the two-day window that includes the publication day, agreement ranged from 53\% to 72\% on INTC. Across the four shared stocks, Benzinga agreed with the price direction on 62\% of its non-neutral headlines, compared with 55\% for Nasdaq, and their confidence intervals did not overlap.
+
+\begin{utptable}{Market Agreement of FinBERT Sentiment by Outlet and Return Window}
+\label{tab:source-agreement}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+\textbf{Stocks} & \textbf{Outlet} & \textbf{Non-neutral} & \textbf{Two-day} & \textbf{Forward} & \textbf{Lagged} \\
+ & & \textbf{headlines} & \textbf{(\%)} & \textbf{(\%)} & \textbf{(\%)} \\
+\midrule
+INTC & GuruFocus & 74 & 71.6 & 55.4 & 51.4 \\
+ & Benzinga & 78 & 61.5 & 52.6 & 52.6 \\
+ & Seeking Alpha & 259 & 61.4 & 53.7 & 52.9 \\
+ & IBD & 240 & 60.0 & 55.0 & 51.2 \\
+ & Nasdaq & 1,077 & 56.7 & 48.5 & 49.3 \\
+ & Zacks & 246 & 53.3 & 49.6 & 50.8 \\
+\midrule
+INTC, MRK, & Benzinga & 1,474 & 62.1 & 51.9 & 49.9 \\
+SBUX, WFC & Nasdaq & 2,713 & 54.8 & 50.5 & 50.4 \\
+\bottomrule
+\multicolumn{6}{@{}l}{\footnotesize IBD: Investor's Business Daily.} \\
+\multicolumn{6}{@{}l}{\footnotesize Close-to-close windows: two-day, $T-1$ to $T+1$; forward, $T$ to $T+1$; lagged, $T+1$ to $T+2$.}
+\end{tabular}
+\end{utptable}
+
+However, most of this agreement disappeared when the publication day was excluded. Over the forward-only window, Benzinga agreed on 51.9\% (95\% CI 49.3--54.4\%) and Nasdaq on 50.5\% (95\% CI 48.7--52.4\%), with overlapping intervals. As a headline dated $T$ could still have been published after the close of day $T$, the lagged window from the close of day $T+1$ was also examined. Agreement over this window was 49.9\% (95\% CI 47.4--52.5\%) for Benzinga and 50.4\% (95\% CI 48.5--52.3\%) for Nasdaq, so neither outlet differed from chance. The small rank correlation of Benzinga over the forward-only window ($\rho = 0.048$, $p = 0.012$) also disappeared over the lagged window ($\rho = 0.001$, $p = 0.963$).
+
+The INTC results for the smaller outlets were based on few headlines. GuruFocus and Benzinga had fewer than 80 non-neutral headlines each, so the 71.6\% for GuruFocus has a wide 95\% confidence interval of 60.5--80.6\%, and the ranking of those outlets should not be over-interpreted.
+
+The outlets also differed in the signal they provided. On stock-days covered by both Nasdaq and Benzinga, the Spearman correlation of their daily sentiment was only 0.13 across 1,051 stock-days. Among the INTC outlet pairs, the correlation ranged from $-$0.10 to 0.23, with a median of 0.06. The label mix also differed, with 47.5\% of Benzinga headlines labelled neutral compared with 66.2\% of Nasdaq headlines.
+
+The prediction experiment by outlet is presented in Table~\ref{tab:source-downstream}. With 448 pooled test days from January to June 2020, a period that includes the onset of the COVID-19 pandemic, the confidence intervals were wide and no pooled gain was significant ($q \geq 0.454$). The results were therefore treated as exploratory, and no difference between the outlets could be established.
+
+\begin{utptable}{Change in Macro-F1 by News Outlet, XGBoost, Four Stocks Pooled, Tested in 2020}
+\label{tab:source-downstream}
+\begin{tabular}{@{}lrcrc@{}}
+\toprule
+\textbf{Horizon} & \multicolumn{2}{c}{\textbf{Nasdaq}} & \multicolumn{2}{c}{\textbf{Benzinga}} \\
+ & \textbf{Change} & \textbf{95\% CI} & \textbf{Change} & \textbf{95\% CI} \\
+\midrule
+1 day & +0.001 & $-$0.035 to +0.040 & $-$0.002 & $-$0.032 to +0.037 \\
+3 days & +0.007 & $-$0.028 to +0.050 & $-$0.005 & $-$0.042 to +0.038 \\
+5 days & +0.033 & $-$0.006 to +0.075 & +0.017 & $-$0.022 to +0.057 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
 
 \section{Discussion}
-% TODO
+\label{sec:discussion}
+The main finding was that FinBERT sentiment from news headlines did not significantly improve the prediction of stock movement beyond price and volume features. XGBoost and the class-weighted LSTM both led to this conclusion under corrected significance tests, and it was unchanged when the sentiment was lagged to remove possible look-ahead. All of the models also remained close to chance, and none improved on a zero-return forecast. These results are consistent with the efficient market hypothesis, according to which publicly available information is rapidly reflected in prices \parencite{fama1970efficient}. The news-source results point in the same direction: sentiment agreed with price moves around the publication day, but this agreement fell to the level of chance once that day was excluded. Sentiment appeared to describe price moves as they occurred, rather than to anticipate later ones.
+
+This result does not prove that sentiment has no predictive value. The confidence intervals for XGBoost spanned approximately $\pm 0.013$ to $\pm 0.016$ around the estimates, so a small effect could have gone undetected. The 5-day XGBoost gain had a confidence interval that excluded zero before correction for multiple comparisons, but it was not significant after correction and did not survive lagging. The correct conclusion is therefore that no reliable gain was detected, and not that the gain is zero.
+
+These findings were weaker than some of those reported in the literature reviewed in Chapter~2. A FinBERT-LSTM was reported to improve on price-only baselines \parencite{gu2024predicting}, and a modest gain from sentiment was reported for FNSPID \parencite{dong2024fnspid}. The small gains observed in this project were in the same direction but were not statistically reliable. The difference may reflect the matched baselines, walk-forward testing and corrected significance tests used here, although differences in the stocks, periods and models also prevent a direct comparison. The source dependence reported in the literature \parencite{electronics2025comparative} was also observed in this project, in that the outlets differed in sentiment and agreement. However, that study measured classification accuracy, whereas this project measured agreement with price direction, so the values are not directly comparable.
+
+The plain LSTM illustrates why a performance gain should be examined before it is accepted. Its significant result would have supported the opposite conclusion had the predictions not been examined by class. Macro-F1 rewarded the additional down predictions even though they were no more precise than the base rate. The class-weighted variant provided a controlled way to separate this effect from genuine information.
+
+The sentiment-model comparison also showed that the choice of model cannot be settled from a text benchmark alone. VADER and BART-MNLI scored lowest on labelled text, but their lagged gains at three days were comparable with those of the finance-domain models. The ranking of the models also changed when the sentiment was lagged. As none of the gains was significant, accuracy on labelled text and usefulness for prediction could not be shown to be related in either direction. FinBERT remained a reasonable choice, given its balanced performance on labelled text and its low computational cost, but these results do not show that it is the best predictor.
+
+Several limitations apply to these findings:
+\begin{itemize}
+\item FNSPID timestamps are date-only, so news could not be aligned with the market close, and the effect of news within the day could not be studied;
+\item only headlines were used, and not full article text;
+\item the outlets other than Nasdaq were available only until June 2020, and Nasdaq supplied 85.7\% of the headlines, so the source comparison was limited to a short period;
+\item the five stocks were selected for their news coverage, so the results may not generalise to smaller or less covered stocks;
+\item hyperparameters were fixed and not tuned, in order to keep the comparisons matched, so better-tuned models might perform differently; and
+\item the LLM was limited to 1.5 billion parameters by the available hardware, so the results do not extend to larger LLMs.
+\end{itemize}

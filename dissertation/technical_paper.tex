@@ -58,6 +58,7 @@
 % Use \cite{key} in the text, which gives [1].
 \usepackage[style=ieee,backend=biber]{biblatex}
 \addbibresource{references.bib}
+\AtBeginBibliography{\sloppy}
 
 % ------------------------------------------------------------
 % PAPER METADATA
@@ -169,33 +170,95 @@ Corresponding email: \CorrespondingEmail\par
 \vspace{12pt}
 {\bfseries Abstract\par}
 {\singlespacing
-% TODO: Write the abstract (less than 300 words, no citations).
+Financial news sentiment is widely used to supplement stock price prediction, but its contribution is often reported without a matched price-only baseline or across a single news source. This study measured the contribution of FinBERT sentiment to stock movement prediction, using 34,810 FNSPID headlines from 2018 to 2023 for five large-capitalisation US stocks. XGBoost and LSTM models were trained with and without sentiment features under identical settings, and were tested by walk-forward evaluation on 2021--2023 at horizons of one, three and five trading days. Six other non-agentic sentiment models were also compared with FinBERT. Differences were tested with a paired block bootstrap and corrected for multiple comparisons. Sentiment did not significantly improve XGBoost or a class-weighted LSTM, and a significant gain from a plain LSTM was shown to be an artifact of class imbalance. All models remained close to chance. As publication times were unavailable for 99.8\% of the headlines, the experiments were repeated with sentiment lagged by one day, and the conclusion was unchanged. No sentiment model was significantly better than another. Agreement between sentiment and price direction varied across outlets when the publication day was included, but fell to about 50\% on later returns. The findings are consistent with the efficient market hypothesis, and suggest that headline sentiment reflects price moves as they occur and provides no reliable information about later moves.
 \par}
 
 \vspace{6pt}
-% TODO: Choose 6 keywords that do not repeat words from the title, separated by semicolons.
-\textbf{\textit{Keywords}}\quad \textit{TODO}
+\textbf{\textit{Keywords}}\quad \textit{ablation study; XGBoost; long short-term memory; walk-forward evaluation; FNSPID; multiple comparisons}
 
 \section{Introduction}
-% TODO
+Stock prices respond to both quantitative signals, such as historical prices and volumes, and qualitative signals, such as news. FinBERT, a BERT model adapted to financial text, has become a standard tool for extracting sentiment from news \cite{araci2019finbert}. It has been combined with sequential and tree-based models for stock prediction \cite{gu2024predicting,mathematics2025stock}, but two gaps recur in this work. Many studies evaluate a single news source, although FinBERT accuracy has been reported to vary from 32\% to 76\% by source \cite{electronics2025comparative}. Many also report a sentiment-augmented model without a price-only model evaluated under the same conditions, so the contribution of sentiment cannot be isolated.
+
+This study addressed both gaps. An ablation design was used to measure the contribution of sentiment over a matched price-only baseline at three horizons, and FinBERT sentiment was examined across news outlets. FinBERT was also compared with six other non-agentic sentiment models, on labelled text and on the prediction task.
 
 \section{Literature Review}
-% TODO
+The efficient market hypothesis holds that public information is rapidly incorporated into prices, which would limit the value of news sentiment \cite{fama1970efficient}. FinBERT was developed because general sentiment models perform poorly on financial language \cite{araci2019finbert,yang2020finbert}, and it is commonly validated on the Financial PhraseBank \cite{malo2014good}. A FinBERT-LSTM has been reported to improve on price-only baselines \cite{gu2024predicting}, and the authors of the FNSPID dataset reported a modest gain from sentiment \cite{dong2024fnspid}. Comparisons with general-purpose LLMs have been inconsistent, with results depending on prompting and fine-tuning \cite{fatouros2023transforming,arxiv2024optimizing}. Few studies combine a multi-source evaluation with a matched ablation across horizons.
 
 \section{Methodology}
-% TODO
+\subsection{Data}
+News headlines were obtained from FNSPID \cite{dong2024fnspid} and daily prices from Yahoo Finance. One stock with news coverage in every year of 2018--2023 was selected from each of five sectors: INTC, SBUX, WFC, CVX and MRK. This gave 34,810 headlines and 1,509 trading days per stock. Headlines were assigned to trading days, with those on non-trading days moved to the next trading day. As 99.8\% of the timestamps were exactly midnight UTC, a headline dated $D$ could not be separated into before or after the market close of day $D$, and a robustness check was therefore included.
+
+\subsection{Sentiment and Features}
+Each headline was scored with a pretrained FinBERT model, and a score was computed as $s = P(\text{positive}) - P(\text{negative})$. Six comparison models were also applied: FinBERT-tone, DistilRoBERTa-fin, RoBERTa-Twitter, VADER, BART-MNLI and Qwen2.5-1.5B. Each read one headline in a single step, without tools or multi-step reasoning. Daily sentiment features comprised the mean and standard deviation of the score, the share of positive and negative headlines, the log headline count and a score decayed across days with a half-life of three trading days. A second set was built from headlines naming the company. Fourteen price features covered returns, volatility, moving-average ratios, the Relative Strength Index, volume and daily range.
+
+\subsection{Models and Evaluation}
+The forward return over $h$ of 1, 3 and 5 trading days was converted into down, stable and up classes, with the stable band set to the 33rd percentile of absolute returns in the training window. XGBoost \cite{chen2016xgboost} and LSTM \cite{hochreiter1997long} models were trained for each stock and horizon, using fixed hyperparameters shared by all feature sets. As the plain LSTM rarely predicted the down class, a class-weighted LSTM was added. Models were tested on each of 2021, 2022 and 2023 and were trained on all earlier data, with the last $h$ training rows removed.
+
+Macro-F1 was the primary metric, and RMSE and directional accuracy were also recorded. Differences from the price-only model were tested with a paired moving-block bootstrap \cite{kunsch1989jackknife}, using blocks of 10 days and 2,000 resamples, and $p$-values were corrected with the Benjamini--Hochberg procedure \cite{benjamini1995controlling}. The experiments were repeated with sentiment lagged by one trading day. Across outlets, market agreement was defined as the share of non-neutral headlines whose sentiment sign matched the return sign. It was computed from the close of day $T-1$ to $T+1$ (two-day), from $T$ to $T+1$ (forward) and from $T+1$ to $T+2$ (lagged).
 
 \section{Results}
-% TODO
+\subsection{Sentiment Models on Labelled Text}
+On the Twitter Financial News dataset \cite{zeroshot2022twitter}, on which none of the models was trained, DistilRoBERTa-fin obtained the highest macro-F1 (0.706), followed by FinBERT (0.668) and FinBERT-tone (0.661). The larger Qwen2.5-1.5B obtained 0.569 and was about 15 times slower than FinBERT, whereas VADER obtained 0.447.
+
+\subsection{Ablation}
+All pooled macro-F1 values lay between 0.291 and 0.352, close to the value of about 0.33 expected by chance. At three and five days, the accuracy of XGBoost was below that of always predicting the most common class. No model improved on a zero-return forecast when the stocks were pooled. The effect of sentiment is shown in Table~\ref{tab:paper-gain}.
+
+\begin{table}[H]
+\centering
+\caption{Change in macro-F1 from adding sentiment, all stocks pooled}
+\label{tab:paper-gain}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Horizon} & \multicolumn{2}{c}{\textbf{Same-day}} & \multicolumn{2}{c}{\textbf{Lagged}} \\
+ & & \textbf{Change} & \textbf{$q$} & \textbf{Change} & \textbf{$q$} \\
+\midrule
+XGBoost & 1 day & +0.005 & 0.726 & +0.001 & 0.930 \\
+ & 3 days & +0.013 & 0.344 & +0.012 & 0.486 \\
+ & 5 days & +0.014 & 0.317 & 0.000 & 0.930 \\
+\midrule
+Class-weighted LSTM & 1 day & 0.000 & 0.992 & $-$0.004 & 0.820 \\
+ & 3 days & +0.018 & 0.284 & +0.009 & 0.684 \\
+ & 5 days & +0.017 & 0.391 & +0.018 & 0.607 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The plain LSTM showed significant gains of +0.025, +0.033 and +0.033 ($q \leq 0.029$). However, the price-only network predicted the down class on only 7--12\% of test days, and sentiment raised this to 20--25\%, while the precision of those predictions stayed close to the share of days that were actually down. Once the class-weighted LSTM removed this imbalance, the gains were no longer significant. For the class-weighted LSTM, sentiment significantly worsened the RMSE at five days, with or without the lag ($q \leq 0.018$).
+
+\subsection{Sentiment Models on Prediction}
+No sentiment model produced a significant gain with XGBoost, with same-day (pooled $q \geq 0.648$) or lagged (pooled $q \geq 0.399$) sentiment. FinBERT produced the largest same-day gains at three and five days, but this did not hold after lagging: DistilRoBERTa-fin then led at three days (+0.017), and the 5-day gain of FinBERT fell to zero. The lagged gains at three days were similar for six of the seven models (+0.011 to +0.017), including VADER, which labelled 98.5\% of the headlines as neutral.
+
+\subsection{News Sources}
+Outlets other than Nasdaq were available only until June 2020, so this comparison was restricted to 2018--2020. Market agreement is shown in Table~\ref{tab:paper-source}. Daily sentiment from Nasdaq and Benzinga correlated at only 0.13 across 1,051 stock-days. Separate XGBoost models using each outlet, tested from January to June 2020, showed no significant gain.
+
+\begin{table}[H]
+\centering
+\caption{Market agreement of FinBERT sentiment (\%)}
+\label{tab:paper-source}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+\textbf{Stocks} & \textbf{Outlet} & \textbf{Non-neutral} & \textbf{Two-day} & \textbf{Forward} & \textbf{Lagged} \\
+\midrule
+INTC & GuruFocus & 74 & 71.6 & 55.4 & 51.4 \\
+ & Nasdaq & 1,077 & 56.7 & 48.5 & 49.3 \\
+ & Zacks & 246 & 53.3 & 49.6 & 50.8 \\
+\midrule
+Four stocks & Benzinga & 1,474 & 62.1 & 51.9 & 49.9 \\
+ & Nasdaq & 2,713 & 54.8 & 50.5 & 50.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Discussion}
-% TODO
+FinBERT sentiment did not significantly improve the prediction of stock movement beyond price and volume features, and this was unchanged when the sentiment was lagged to remove possible look-ahead. These results are consistent with the efficient market hypothesis \cite{fama1970efficient}. The news-source results point in the same direction, as the 62\% and 55\% agreement of Benzinga and Nasdaq fell to about 50\% when the publication day was excluded. Sentiment appeared to describe price moves as they occurred, rather than to anticipate later ones.
+
+These results do not prove that sentiment has no predictive value, as the confidence intervals of about $\pm 0.013$ to $\pm 0.016$ could conceal a small effect. They are weaker than some results in the literature \cite{gu2024predicting,dong2024fnspid}, which may reflect the matched baselines, walk-forward testing and corrected tests used here, although differences in stocks, periods and models prevent a direct comparison. The plain LSTM also showed that a significant gain in macro-F1 can arise from a change in how often a class is predicted. The main limitations were date-only timestamps, the use of headlines only, the dominance of Nasdaq in the data (85.7\% of headlines), and the selection of five stocks with high news coverage.
 
 \section{Conclusion}
-% TODO
+A matched ablation found no reliable gain from FinBERT sentiment over price features at horizons of one to five trading days, and the most accurate sentiment model on labelled text could not be shown to be the most useful for prediction. Future research should use news with exact publication times, test the headline-count feature separately from sentiment, and include smaller stocks, for which prices may absorb news more slowly.
 
 \section{Acknowledgment}
-% TODO
+% TODO: Write the acknowledgment.
 
 % Prints every entry cited with \cite{...}, numbered in citation order.
 \section{References}

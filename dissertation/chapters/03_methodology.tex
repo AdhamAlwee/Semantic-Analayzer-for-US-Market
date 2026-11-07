@@ -1,28 +1,255 @@
 \chapter{METHODOLOGY/PROJECT WORK}
 
+This chapter describes how the experiments were designed and carried out. The data sources and stock selection are presented first, followed by the sentiment classification, feature engineering and prediction models. The ablation and source-comparison designs and the evaluation procedure are then explained.
+
 \section{Research Design}
-% TODO
+\label{sec:research-design}
+The Cross-Industry Standard Process for Data Mining (CRISP-DM) was adopted as the guiding framework, as the primary output of the project is a set of evaluated predictive models rather than a deployed software system \parencite{wirth2000crisp}. Business understanding corresponds to the problem statement and objectives in Chapter~1. Data understanding and preparation correspond to the coverage analysis and feature construction in this chapter. Modelling and evaluation correspond to the experiments reported in Chapter~4. In this academic context, deployment corresponds to the documentation and reporting of the findings.
+
+The experimental pipeline consisted of five stages, as illustrated in Figure~\ref{fig:pipeline}. Financial news headlines and daily prices were first collected and aligned by trading day. Each headline was then scored by a sentiment model, and the scores were aggregated into daily features for each stock. Prediction models were subsequently trained with and without those features, and the results were compared by model, sentiment source, news outlet and prediction horizon.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  stage/.style={draw, align=center, text width=2.2cm, minimum height=2.1cm, font=\small},
+  node distance=4mm]
+\node[stage] (a) {Collect FNSPID news and daily prices};
+\node[stage, right=of a] (b) {Score each headline for sentiment};
+\node[stage, right=of b] (c) {Build daily price and sentiment features};
+\node[stage, right=of c] (d) {Train matched price-only and augmented models};
+\node[stage, right=of d] (e) {Evaluate by model, source and horizon};
+\draw[->] (a) -- (b);
+\draw[->] (b) -- (c);
+\draw[->] (c) -- (d);
+\draw[->] (d) -- (e);
+\end{tikzpicture}
+\caption{Experimental Pipeline}
+\label{fig:pipeline}
+\end{figure}
+
+Several decisions in the interim report were revised once the data had been examined. These changes are summarised in Table~\ref{tab:deviations}.
+
+\begin{utptable}{Changes from the Interim Report Plan}
+\label{tab:deviations}
+\begin{tabular}{@{}P{3.0cm}P{4.0cm}P{6.6cm}@{}}
+\toprule
+\textbf{Item} & \textbf{Change} & \textbf{Reason} \\
+\midrule
+Stocks & AAPL, AMZN, JPM, XOM and JNJ replaced by INTC, SBUX, WFC, CVX and MRK & FNSPID coverage of the original stocks was patchy across 2018--2023. \\
+Recency weighting & Within-day weighting replaced by decay across days & FNSPID timestamps are almost entirely date-only, so the time of day could not be recovered. \\
+Sequential model & Only the LSTM was built; a GRU was not & The LSTM was sufficient to represent the sequential model family. \\
+Class-weighted LSTM & Added & The plain LSTM rarely predicted the down class, as explained in Section~\ref{sec:models}. \\
+Sentiment models & Six comparison models added & The supervisor requested a comparison against other non-agentic AI models. \\
+News sources & Outlets within FNSPID were compared; NewsAPI and RSS were not implemented & FNSPID contains several outlets, and a live source could not cover the 2018--2023 study period. \\
+\bottomrule
+\end{tabular}
+\end{utptable}
 
 \section{Data Sources and Stock Selection}
-% TODO
+\label{sec:data}
+News headlines were obtained from the Financial News and Stock Price Integration Dataset (FNSPID) \parencite{dong2024fnspid}. The dataset was downloaded from Hugging Face and read in chunks, as its size of approximately 29~GB exceeded the available memory. Only the headline-level columns were retained, duplicate headlines were removed by URL and by identical headline on the same day, and the news outlet was derived from the web address of each article. Adjusted daily open, high, low, close and volume data were obtained from Yahoo Finance through the \texttt{yfinance} library.
+
+The stocks named in the interim report were found to have patchy FNSPID coverage between 2018 and 2023. All tickers in the dataset were therefore scanned, and one large-capitalisation stock was selected from each of five sectors on the basis of news coverage in every year of the study period. The final data comprised 34,810 headlines and 1,509 trading days per stock, as shown in Table~\ref{tab:coverage}.
+
+\begin{utptable}{News Coverage of the Selected Stocks, 2018--2023}
+\label{tab:coverage}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+\textbf{Stock} & \textbf{Sector} & \textbf{Headlines} & \textbf{Days with} & \textbf{Median per} & \textbf{Naming the} \\
+ & & & \textbf{news (\%)} & \textbf{news day} & \textbf{company (\%)} \\
+\midrule
+INTC & Technology & 10,820 & 97.8 & 6 & 38.3 \\
+SBUX & Consumer & 5,289 & 91.4 & 3 & 49.1 \\
+WFC & Banking & 5,853 & 92.0 & 3 & 43.2 \\
+CVX & Energy & 7,216 & 95.0 & 4 & 38.2 \\
+MRK & Healthcare & 5,632 & 91.7 & 3 & 43.3 \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+Two properties of FNSPID constrained the design. First, nasdaq.com supplied 85.7\% of the headlines, and other outlets were present only until 11 June 2020. The news-source comparison was therefore restricted to the period from 1 January 2018 to 11 June 2020. Second, only 38--49\% of the headlines tagged to a stock named the company or its ticker, because the tags also cover peer and general market news. A separate set of company-specific features was therefore constructed, as described in Section~\ref{sec:features}.
+
+Each headline was assigned to the first trading day whose close it could affect. Headlines published at or after the 16:00 New York market close, and those published on weekends or holidays, were assigned to the next trading day. However, 34,752 of the 34,810 timestamps (99.8\%) were exactly midnight UTC, which indicates that only the publication date was recorded. A headline dated $D$ was consequently assigned to day $D$ when $D$ was a trading day, whatever its true publication time. A headline published after the close on day $D$ could therefore be included in the features for day $D$, although it could have influenced the price only after that close. This limitation would be expected to favour the sentiment-augmented models. A robustness check was therefore carried out, as described in Section~\ref{sec:ablation}.
 
 \section{Sentiment Classification}
-% TODO
+\label{sec:sentiment}
+The pretrained \texttt{ProsusAI/finbert} model \parencite{araci2019finbert} was used without fine-tuning, in line with the project scope. Each headline $i$ was given a probability for each of the positive, negative and neutral classes. A signed sentiment score was computed from these probabilities, as shown in Equation~\ref{eq:score}.
+\begin{equation}
+s_i = P_i(\text{positive}) - P_i(\text{negative})
+\label{eq:score}
+\end{equation}
+
+Six other non-agentic models were compared against FinBERT at the request of the supervisor, as listed in Table~\ref{tab:sentiment-models}. Each model read one headline and returned one prediction in a single step, without tools, retrieval, memory or multi-step reasoning, so that every model received exactly the same input.
+
+\begin{utptable}{Sentiment Models Compared}
+\label{tab:sentiment-models}
+\begin{tabular}{@{}P{2.9cm}P{3.4cm}P{7.3cm}@{}}
+\toprule
+\textbf{Model} & \textbf{Family} & \textbf{Checkpoint or implementation} \\
+\midrule
+FinBERT & Finance-domain BERT & \nolinkurl{ProsusAI/finbert} \parencite{araci2019finbert} \\
+FinBERT-tone & Finance-domain BERT & \nolinkurl{yiyanghkust/finbert-tone} \parencite{yang2020finbert} \\
+DistilRoBERTa-fin & Compact finance transformer & \texttt{mrm8488/\allowbreak distilroberta-\allowbreak finetuned-\allowbreak financial-\allowbreak news-\allowbreak sentiment-\allowbreak analysis} \\
+RoBERTa-Twitter & General sentiment transformer & \texttt{cardiffnlp/\allowbreak twitter-roberta-base-sentiment-latest} \parencite{loureiro2022timelms} \\
+VADER & Rule-based word list & Compound score thresholded at $\pm 0.05$ \parencite{hutto2014vader} \\
+BART-MNLI & Zero-shot classifier & \nolinkurl{facebook/bart-large-mnli} \parencite{lewis2020bart,yin2019benchmarking} \\
+Qwen2.5-1.5B & General LLM, one fixed prompt & \nolinkurl{Qwen/Qwen2.5-1.5B-Instruct} \parencite{qwen2024technical} \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+The models were evaluated in two ways. In the first test, predictions were compared with human labels on two datasets. The Financial PhraseBank subset on which all annotators agreed (2,264 sentences) was used as the standard benchmark \parencite{malo2014good}. However, FinBERT and DistilRoBERTa-fin were trained on this dataset, so their scores on it were treated as inflated. The validation split of the Twitter Financial News dataset (2,388 headlines) \parencite{zeroshot2022twitter} was not used to train any of the models and was therefore treated as the fair comparison. Accuracy, macro-averaged F1, per-class scores and Cohen's kappa between pairs of models \parencite{cohen1960coefficient} were recorded. In the second test, every model scored all 34,810 FNSPID headlines, and its daily features were passed through the same prediction experiment, as described in Section~\ref{sec:ablation}.
 
 \section{Feature Engineering}
-% TODO
+\label{sec:features}
+All features on day $t$ were computed from information dated up to day $t$, subject to the limitation stated in Section~\ref{sec:data}. Price features were expressed as returns and ratios rather than raw price levels, as listed in Table~\ref{tab:price-features}.
+
+\begin{utptable}{Price Features}
+\label{tab:price-features}
+\begin{tabular}{@{}P{4.2cm}P{9.8cm}@{}}
+\toprule
+\textbf{Feature} & \textbf{Definition} \\
+\midrule
+\texttt{ret\_1} & One-day return \\
+\texttt{ret\_lag1} to \texttt{ret\_lag5} & One-day return lagged by one to five days \\
+\texttt{ret\_5} & Five-day return \\
+\texttt{volatility\_20} & Standard deviation of one-day returns over 20 days \\
+\texttt{ma\_ratio\_20}, \texttt{ma\_ratio\_50} & Close relative to its 20-day and 50-day moving averages \\
+\texttt{rsi\_14} & 14-day Relative Strength Index \parencite{wilder1978new} \\
+\texttt{volume\_ratio\_20} & Volume relative to its 20-day mean \\
+\texttt{log\_volume\_change} & Daily change in log volume \\
+\texttt{hl\_range} & Daily high--low range relative to the close \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+The headline scores were aggregated by stock and trading day into the features in Table~\ref{tab:sentiment-features}. On days without news, the counts and sentiment features were set to zero, which represents neutral sentiment.
+
+\begin{utptable}{Sentiment Features}
+\label{tab:sentiment-features}
+\begin{tabular}{@{}P{4.6cm}P{9.4cm}@{}}
+\toprule
+\textbf{Feature} & \textbf{Definition} \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Sentiment set, from all headlines tagged to the stock}} \\
+\texttt{news\_count\_log} & Logarithm of one plus the number of headlines \\
+\texttt{sent\_mean} & Mean of the headline scores \\
+\texttt{sent\_std} & Standard deviation of the headline scores within the day \\
+\texttt{pos\_ratio}, \texttt{neg\_ratio} & Share of headlines labelled positive and negative \\
+\texttt{sent\_decay} & Count-weighted score decaying across days (Equation~\ref{eq:decay}) \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Company set, from headlines naming the company or its ticker}} \\
+\texttt{company\_news\_count\_log} & Logarithm of one plus the number of such headlines \\
+\texttt{company\_sent\_mean} & Mean of the scores of such headlines \\
+\texttt{company\_sent\_decay} & The decayed score computed from such headlines \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+The interim report proposed recency weighting within each day. As publication times were unavailable, recency was instead weighted across days using an exponential decay with a half-life of three trading days, as shown in Equation~\ref{eq:decay}, where $n_t$ is the number of headlines on day $t$ and $\bar{s}_t$ is their mean score.
+\begin{equation}
+D_t = \frac{\sum_{k \geq 0} w^k \, n_{t-k} \, \bar{s}_{t-k}}{\sum_{k \geq 0} w^k \, n_{t-k}}, \qquad w = 2^{-1/3}
+\label{eq:decay}
+\end{equation}
+
+The forward return $r_{t,h}$ over a horizon of $h$ trading days was computed using Equation~\ref{eq:return}, for $h$ of 1, 3 and 5, with 5 trading days representing one week.
+\begin{equation}
+r_{t,h} = \frac{\text{close}_{t+h}}{\text{close}_{t}} - 1
+\label{eq:return}
+\end{equation}
+
+Each return was converted into a down, stable or up class using Equation~\ref{eq:label}, where the band $b$ is the 33rd percentile of the absolute forward return in the training window. Because the band was computed from training data only, no information from the test period was used, and the test classes were not forced to be equal in size.
+\begin{equation}
+y_{t,h} =
+\begin{cases}
+\text{up} & \text{if } r_{t,h} > b \\
+\text{down} & \text{if } r_{t,h} < -b \\
+\text{stable} & \text{otherwise}
+\end{cases}
+\label{eq:label}
+\end{equation}
 
 \section{Prediction Models}
-% TODO
+\label{sec:models}
+Separate models were trained for each stock, horizon, test year and feature set. Hyperparameters were fixed in advance and shared by all feature sets, with no tuning for any individual set, so that a difference in performance could be attributed to the features. The settings are listed in Table~\ref{tab:hyperparameters}.
+
+\begin{utptable}{Fixed Model Settings}
+\label{tab:hyperparameters}
+\begin{tabular}{@{}P{1.9cm}P{5.4cm}P{6.3cm}@{}}
+\toprule
+\textbf{Model} & \textbf{Setting} & \textbf{Value} \\
+\midrule
+XGBoost & Trees; maximum depth; learning rate & 300; 3; 0.03 \\
+ & Row and column subsampling & 0.8; 0.8 \\
+ & Minimum child weight; L2 penalty & 5; 1.0 \\
+\midrule
+LSTM & Input window; hidden units; dropout & 20 trading days; 32; 0.2 \\
+ & Optimiser; learning rate; weight decay & Adam; 0.001; 0.0001 \\
+ & Batch size; maximum epochs; patience & 64; 60; 8 \\
+ & Validation data & Most recent 15\% of the training window, purged \\
+ & Regression loss weight; random seeds & 0.5; 3, averaged \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+XGBoost \parencite{chen2016xgboost} represented the gradient-boosted tree family. A classifier was trained for the movement class and a separate regressor for the percentage return.
+
+An LSTM \parencite{hochreiter1997long} represented the sequential family. A single network with a classification head and a regression head was trained jointly, using cross-entropy loss plus a weighted mean squared error on the standardised return. Inputs were standardised with statistics from the training window only and clipped to $\pm 5$ standard deviations. Early stopping was performed on the most recent part of the training window, never on the test year. Class probabilities and return predictions were averaged over three seeds, and the same seeds were used for every feature set.
+
+The plain LSTM was found to predict the down class only rarely. A class-weighted LSTM was therefore added, in which the cross-entropy loss was weighted by the inverse class frequency in the training data. This variant was used to test whether the gains of the plain LSTM reflected real information or a change in how often the down class was predicted. The result of this check is reported in Chapter~4.
 
 \section{Ablation and Source-Comparison Design}
-% TODO
+\label{sec:ablation}
+The ablation study compared three feature sets under identical hyperparameters, seeds and data splits: price features only; price plus sentiment features; and price plus sentiment plus company-specific features. Each sentiment-augmented model was compared with the price-only model on the same test days.
+
+Walk-forward evaluation was used instead of a random split, so that no model was trained on data from later than its test period. Models were tested on each of 2021, 2022 and 2023, and were trained on all earlier data from 2018 onwards. The last $h$ rows of each training window were removed, so that no training target overlapped the test year.
+
+A robustness check was carried out to remove the possible look-ahead described in Section~\ref{sec:data}. The XGBoost, class-weighted LSTM and sentiment-model experiments were repeated with every sentiment feature on day $t$ taken from day $t-1$, while the price features, targets, splits and hyperparameters were left unchanged.
+
+The choice of sentiment model was tested with the same procedure. The daily features of each of the seven models in Table~\ref{tab:sentiment-models} replaced those of FinBERT in the XGBoost experiment, and every model was compared with the same price-only baseline. The sentiment model was therefore the only element that changed.
+
+The news-source comparison was carried out in two parts. As FNSPID headlines have no human labels, the first part used two label-free measures, applied to outlets with at least 200 headlines. Market agreement was defined as the percentage of non-neutral headlines for which the sign of the FinBERT score matched the sign of the return, together with the Spearman correlation between the score and the return. This measure was computed over three windows, with $T$ as the trading day of the headline:
+\begin{itemize}
+\item a two-day window from the close of day $T-1$ to the close of day $T+1$, which includes the publication day, so that some headlines merely report a price move that has already occurred;
+\item a forward-only window from the close of day $T$ to the close of day $T+1$, which excludes the move on the publication day; and
+\item a lagged window from the close of day $T+1$ to the close of day $T+2$, which begins after any headline dated $T$ has been published.
+\end{itemize}
+
+Consistency between outlets was measured as the Spearman correlation of their daily mean sentiment on stock-days covered by both. These measures were applied to INTC, the only stock covered by all six qualifying outlets, and to Nasdaq and Benzinga across INTC, MRK, SBUX and WFC.
+
+The second part repeated the XGBoost ablation with sentiment features built separately from Nasdaq and from Benzinga headlines, for the same four stocks. Models were trained on 2018--2019 and tested from 1 January to 11 June 2020. As this test window is short, the second part was treated as exploratory.
 
 \section{Evaluation Metrics and Statistical Tests}
-% TODO
+\label{sec:evaluation}
+Movement predictions were evaluated with accuracy and with macro-averaged precision, recall and F1. Macro-F1 was used as the primary metric, as it weights the three classes equally and is not improved by predicting only the most common class. Return predictions were evaluated with the root mean square error (RMSE) and directional accuracy. Results were reported for each stock and for all five stocks pooled.
+
+Two naive baselines were computed for context: a majority-class prediction taken from the training data, and a zero-return forecast for the RMSE.
+
+The difference between each sentiment-augmented model and its price-only baseline was tested with a paired moving-block bootstrap \parencite{kunsch1989jackknife}. Blocks of 10 trading days were used to respect the autocorrelation created by overlapping multi-day targets, and 2,000 resamples were drawn to obtain 95\% confidence intervals and two-sided $p$-values. As many comparisons were made, the $p$-values were adjusted with the Benjamini--Hochberg procedure to control the false discovery rate \parencite{benjamini1995controlling}, and a difference was treated as significant only when its adjusted value $q$ was below 0.05. Confidence intervals for market agreement were computed with the Wilson score interval \parencite{wilson1927probable}.
 
 \section{Tools and Technology Stack}
-% TODO
+\label{sec:tools}
+The tools used in the project are listed in Table~\ref{tab:tools}. All experiments can be re-run from the project repository using \texttt{python -m src.main}.
+
+\begin{utptable}{Tools and Technology Stack}
+\label{tab:tools}
+\begin{tabular}{@{}P{4.5cm}P{9.5cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Tool} \\
+\midrule
+Language & Python 3.12 \\
+Deep learning and language models & PyTorch 2.14 with CUDA 12.6; Hugging Face Transformers 4.57 \\
+Machine learning & XGBoost 3.4; scikit-learn 1.9 \\
+Data handling & pandas 3.0; NumPy; PyArrow; yfinance \\
+Rule-based sentiment & vaderSentiment \\
+Hardware & NVIDIA RTX 3050 Ti laptop GPU (4~GB); approximately 14~GB RAM \\
+\bottomrule
+\end{tabular}
+\end{utptable}
+
+The hardware limited the size of the LLM that could be run locally. Scoring by the slower models was therefore saved in chunks of 5,000 headlines, so that a run interrupted by a memory error could be resumed.
 
 \section{Project Timeline}
-% TODO
+\label{sec:timeline}
+% TODO: Insert the Gantt chart in chapters/appendices.tex; add any dates that moved from the interim plan.
+Data collection, FinBERT validation, model development and the ablation and source-comparison experiments were carried out during Final Year Project~II. The project timeline is presented in Appendix~\ref{app:gantt}.
