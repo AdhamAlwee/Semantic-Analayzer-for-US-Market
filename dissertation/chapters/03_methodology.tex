@@ -206,6 +206,8 @@ Walk-forward evaluation was used instead of a random split, so that no model was
 
 A robustness check was carried out to remove the possible look-ahead described in Section~\ref{sec:data}. The XGBoost, class-weighted LSTM and sentiment-model experiments were repeated with every sentiment feature on day $t$ taken from day $t-1$, while the price features, targets, splits and hyperparameters were left unchanged.
 
+A second check separated the number of headlines from their sentiment. The log headline count is one of the six sentiment features, and it does not depend on the sentiment model. The XGBoost experiment was therefore repeated with two further feature sets: price plus the headline count only, and price plus the five sentiment features without the headline count. Both were compared with the same price-only model, with same-day and with lagged features.
+
 The choice of sentiment model was tested with the same procedure. The daily features of each of the seven models in Table~\ref{tab:sentiment-models} replaced those of FinBERT in the XGBoost experiment, and every model was compared with the same price-only baseline. The sentiment model was therefore the only element that changed.
 
 The news-source comparison was carried out in two parts. As FNSPID headlines have no human labels, the first part used two label-free measures, applied to outlets with at least 200 headlines. Market agreement was defined as the percentage of non-neutral headlines for which the sign of the FinBERT score matched the sign of the return, together with the Spearman correlation between the score and the return. This measure was computed over three windows, with $T$ as the trading day of the headline:
@@ -251,5 +253,4 @@ The hardware limited the size of the LLM that could be run locally. Scoring by t
 
 \section{Project Timeline}
 \label{sec:timeline}
-% TODO: Insert the Gantt chart in chapters/appendices.tex; add any dates that moved from the interim plan.
-Data collection, FinBERT validation, model development and the ablation and source-comparison experiments were carried out during Final Year Project~II. The project timeline is presented in Appendix~\ref{app:gantt}.
+Data collection, FinBERT validation, model development and the ablation and source-comparison experiments were carried out during Final Year Project~II. The robustness checks were added in November 2026, after the date-only timestamps had been identified. The project timeline is presented in Appendix~\ref{app:gantt}.

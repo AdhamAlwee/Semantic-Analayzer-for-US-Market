@@ -381,11 +381,16 @@ Signed,
 \UTPPrelimChapter{ABSTRACT}
 Financial news sentiment is widely used to supplement stock price prediction, but its contribution is often reported without a matched price-only baseline or across a single news source. This project measured the contribution of FinBERT sentiment to stock movement prediction in the US market. A total of 34,810 FNSPID headlines from 2018 to 2023 were scored for five large-capitalisation stocks. FinBERT was compared with six other non-agentic sentiment models on labelled text, and on the prediction task. XGBoost and LSTM models were trained with and without sentiment features under identical settings and tested by walk-forward evaluation on 2021--2023, at horizons of one, three and five trading days. Differences were tested with a paired block bootstrap and corrected for multiple comparisons.
 
-Sentiment did not significantly improve XGBoost or a class-weighted LSTM, whose pooled gains in macro-F1 were at most 0.023. A significant gain from a plain LSTM was shown to be an artifact of class imbalance. All models remained close to chance, and none improved on a zero-return forecast when the stocks were pooled. As publication times were unavailable for 99.8\% of the headlines, the experiments were repeated with sentiment lagged by one day, and the conclusion was unchanged. FinBERT had the largest same-day gains at three and five days, but this ranking did not hold after lagging, and no differences between sentiment models were significant. Market agreement varied across outlets when the publication day was included, but fell to about 50\% for Nasdaq and Benzinga on later returns. These findings are consistent with the efficient market hypothesis, and suggest that headline sentiment reflects price moves as they occur and provides no reliable information about later moves.
+Sentiment did not significantly improve XGBoost or a class-weighted LSTM, whose pooled gains in macro-F1 were at most 0.023. A significant gain from a plain LSTM was shown to be an artifact of class imbalance. All models remained close to chance, and none improved on a zero-return forecast when the stocks were pooled. As publication times were unavailable for 99.8\% of the headlines, the experiments were repeated with sentiment lagged by one day, and the conclusion was unchanged. Neither the headline count nor the sentiment scores produced a significant gain when tested separately. FinBERT had the largest same-day gains at three and five days, but this ranking did not hold after lagging, and no differences between sentiment models were significant. Market agreement varied across outlets when the publication day was included, but fell to about 50\% for Nasdaq and Benzinga on later returns. These findings are consistent with the efficient market hypothesis, and suggest that headline sentiment reflects price moves as they occur and provides no reliable information about later moves.
 
 % Acknowledgements (one page at most)
 \UTPPrelimChapter{ACKNOWLEDGEMENTS}
-% TODO: Write the acknowledgements, naming the supervisor and other contributors.
+% Draft: edit freely to make it personal.
+The author would like to express sincere gratitude to the supervisor, Ts. Dr. Nurul Aida Binti Osman, for the guidance, feedback and encouragement given throughout Final Year Project I and II. The advice to compare FinBERT with other open, non-agentic models shaped an important part of this work.
+
+Thanks are also extended to the Final Year Project coordinators and the lecturers of Universiti Teknologi PETRONAS for their support, and to the authors of FNSPID and of the open sentiment models used in this project for making their data and models publicly available.
+
+Finally, the author is grateful to family and friends for their patience and encouragement throughout the course of this project.
 
 % Table of Contents
 \clearpage
@@ -410,7 +415,6 @@ Sentiment did not significantly improve XGBoost or a class-weighted LSTM, whose 
 \UTPListHeading{ABBREVIATIONS AND NOMENCLATURES}
 
 
-% TODO: Keep the abbreviations in alphabetical order.
 \UTPListSubheading{Abbreviations}
 \begin{longtable}{@{}p{3.6cm}p{10.4cm}@{}}
 \AbbrevEntry{CRISP-DM}{Cross-Industry Standard Process for Data Mining}
@@ -424,7 +428,6 @@ Sentiment did not significantly improve XGBoost or a class-weighted LSTM, whose 
 \AbbrevEntry{UTP}{Universiti Teknologi PETRONAS}
 \end{longtable}
 
-% TODO: List the symbols used in equations. Delete this block if there are none.
 \UTPListSubheading{Nomenclatures}
 \begin{longtable}{@{}p{3.6cm}p{10.4cm}@{}}
 \AbbrevEntry{$b$}{Stable band: 33rd percentile of the absolute forward return in the training window}

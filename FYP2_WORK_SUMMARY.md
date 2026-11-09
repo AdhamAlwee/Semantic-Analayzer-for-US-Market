@@ -154,11 +154,11 @@ python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct
 
 **Code:** `src/sentiment_downstream.py` → `results/sentiment_downstream/`
 
-Each of the 7 models scored all 34,810 headlines and went through the same XGBoost ablation against the same price-only baseline. Figures are the change in macro-F1, all five stocks pooled.
+Each of the 7 models scored all 34,810 headlines and went through the same XGBoost ablation against the same price-only baseline. Figures are the change in macro-F1 with **same-day** sentiment, all five stocks pooled. Section 6a repeats this with sentiment lagged by one day, and the ranking changes.
 
 | Model | 1d | 3d | 5d | Stock–horizon combos improved | Text F1 |
 |---|---|---|---|---|---|
-| **FinBERT** | +0.005 | **+0.013** | **+0.015** | 10/15 | 0.668 |
+| **FinBERT** | +0.005 | **+0.013** | **+0.014** | 10/15 | 0.668 |
 | BART zero-shot | +0.004 | +0.006 | +0.009 | 11/15 | 0.458 |
 | Qwen 1.5B | +0.002 | +0.012 | +0.002 | 9/15 | 0.569 |
 | RoBERTa-Twitter | +0.010 | +0.010 | +0.000 | 11/15 | 0.613 |
@@ -168,8 +168,8 @@ Each of the 7 models scored all 34,810 headlines and went through the same XGBoo
 
 **Findings:**
 
-- **FinBERT gives the largest gain at 3 and 5 days**, which supports choosing it. None of the models is statistically significant (smallest corrected q = 0.65), so this is a ranking, not proof.
-- **The best text classifier is not the best predictor.** DistilRoBERTa wins the labelled-text test but adds almost nothing to price prediction. Sentiment models should be judged on the task they are used for, not only on text benchmarks.
+- **With same-day sentiment, FinBERT gives the largest gain at 3 and 5 days.** None of the models is statistically significant (smallest corrected q = 0.65), so this is a ranking, not proof. **The ranking does not survive the one-day lag (Section 6a)**, so it does not show that FinBERT is the best predictor.
+- **Text accuracy and predictive value could not be linked.** DistilRoBERTa wins the labelled-text test but adds almost nothing with same-day sentiment, yet it leads at 3 days once lagged. As no gain is significant, neither direction can be shown.
 - **The models disagree a lot on real headlines.**
   - Agreement with FinBERT is κ = 0.60 for DistilRoBERTa and 0.25 for Qwen.
   - Qwen and BART label over 60% of headlines positive, against FinBERT's 21%.
@@ -238,6 +238,22 @@ The experiments were repeated with every sentiment feature on day t taken from d
 - **Market agreement on the following day's return** (close of T+1 to close of T+2) is about 50%: Benzinga 49.9%, Nasdaq 50.4%.
 - The class-weighted LSTM's RMSE is significantly worse with sentiment at 5 days, with or without the lag.
 
+### Headline count vs sentiment scores
+
+**Code:** `src/count_ablation.py` → `results/count_ablation/`
+
+XGBoost was re-run with the log headline count alone and with the five sentiment features without the count. Gains in macro-F1, all stocks pooled:
+
+| Horizon | Same-day: count / scores / all | Lagged: count / scores / all |
+|---|---|---|
+| 1 day | −0.004 / −0.003 / +0.005 | −0.001 / +0.003 / +0.001 |
+| 3 days | +0.006 / +0.009 / +0.013 | +0.010 / +0.016 / +0.012 |
+| 5 days | −0.003 / +0.014 / +0.014 | +0.001 / 0.000 / 0.000 |
+
+- Nothing is significant (q ≥ 0.389).
+- The lagged 3-day gain is not explained by the headline count alone: the scores without the count give a similar gain.
+- The same-day 5-day gain comes entirely from the scores and disappears when lagged, which fits sentiment reflecting the same day's price move.
+
 ---
 
 ## 7. Cleanup and engineering
@@ -263,7 +279,8 @@ The experiments were repeated with every sentiment feature on day t taken from d
 | Supervisor's "compare against other AI (non-agentic)" | Sections 2 and 5 (text benchmark and prediction benchmark) |
 | Ablation by model and horizon | `results/ablation/` |
 | Comparison by news source | `results/source_comparison/` |
-| Discussion | Small, non-significant gains at 3–5 days; the LSTM artifact; text accuracy ≠ predictive value; source disagreement; consistency with market efficiency |
+| Robustness (lag, headline count) | `results/lag_robustness/`, `results/count_ablation/` |
+| Discussion | No reliable gain, with or without the lag; the LSTM artifact; source agreement is a same-day effect; consistency with market efficiency |
 
 ---
 
@@ -271,7 +288,7 @@ The experiments were repeated with every sentiment feature on day t taken from d
 
 - **Ticker change:** INTC, SBUX, WFC, CVX and MRK replace AAPL, AMZN, JPM, XOM and JNJ. This was a data-coverage decision, and `results/data_coverage/` documents it.
 - **Recency weighting:** FNSPID gives only the date of each article, not the time. So within-day recency weighting became a sentiment score that fades across days.
-- **Not built yet:**
-  - NewsAPI/RSS live news (a supplementary source in the interim report)
-  - a larger LLM, e.g. Qwen 7B on Colab
-- **Remaining:** the dissertation write-up.
+- **Not built (explained in Chapter 3, Table of changes from the interim report):**
+  - NewsAPI/RSS live news (a supplementary source in the interim report): a live source cannot cover 2018–2023.
+  - a larger LLM, e.g. Qwen 7B on Colab (listed as future work)
+- **Status (9 Nov 2026):** full drafts of the dissertation (`dissertation/main.tex`) and technical paper (`dissertation/technical_paper.tex`).

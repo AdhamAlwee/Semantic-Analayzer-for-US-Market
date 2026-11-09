@@ -7,7 +7,8 @@ Run the full FYP II pipeline end to end.
   4. model_comparison     FinBERT vs other non-agentic models on labelled text
   5. sentiment_downstream the same models as sentiment sources for prediction
   6. source_comparison    FinBERT consistency and predictive value per news outlet
-  7. lag_robustness       the main experiments with sentiment lagged by one trading day
+  7. lag_robustness       the main experiments with sentiment lagged by one trading day,
+                          and the headline count tested apart from the sentiment scores
 
 Each step caches its outputs, so re-running skips work that is already done
 (except the experiments themselves, which are cheap to repeat).
@@ -67,6 +68,10 @@ def main() -> None:
         run_lagged_ablation("xgboost")
         run_lagged_ablation("lstm_balanced")
         run_lagged_downstream()
+
+        from src.count_ablation import run_count_ablation
+
+        run_count_ablation()
 
 
 if __name__ == "__main__":

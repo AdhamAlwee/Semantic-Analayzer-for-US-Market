@@ -224,7 +224,27 @@ No gain from any sentiment model was significant after correction, whether the s
 
 With same-day sentiment, FinBERT produced the largest gains at three and five days, although Qwen2.5-1.5B was almost level at three days. This ranking did not hold when the sentiment was lagged. At three days, DistilRoBERTa-fin then produced the largest gain (+0.017), and at five days the gain of FinBERT fell to zero. The choice of FinBERT was therefore not contradicted, but the results did not show that it was the most useful sentiment model for prediction.
 
-The lagged gains at three days were notably similar across six of the seven models, at between +0.011 and +0.017. This group included VADER, which labelled 98.5\% of the headlines as neutral and agreed with FinBERT at a kappa of only 0.02. A gain that does not depend on the sentiment model may not arise from the sentiment scores themselves. All of the models shared the headline-count feature, which may have contributed to this pattern, but its contribution was not tested separately.
+The lagged gains at three days were notably similar across six of the seven models, at between +0.011 and +0.017. This group included VADER, which labelled 98.5\% of the headlines as neutral and agreed with FinBERT at a kappa of only 0.02. A gain that does not depend on the sentiment model may not arise from the sentiment scores themselves. All of the models shared the headline-count feature, so its contribution was tested separately, as shown in Table~\ref{tab:count-results}.
+
+\begin{utptable}{Change in Macro-F1 from the Headline Count and the Sentiment Scores, XGBoost, All Stocks Pooled}
+\label{tab:count-results}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{Horizon} & \multicolumn{3}{c}{\textbf{Same-day}} & \multicolumn{3}{c}{\textbf{Lagged one day}} \\
+ & \textbf{Count} & \textbf{Scores} & \textbf{All} & \textbf{Count} & \textbf{Scores} & \textbf{All} \\
+\midrule
+1 day & $-$0.004 & $-$0.003 & +0.005 & $-$0.001 & +0.003 & +0.001 \\
+3 days & +0.006 & +0.009 & +0.013 & +0.010 & +0.016 & +0.012 \\
+5 days & $-$0.003 & +0.014 & +0.014 & +0.001 & 0.000 & 0.000 \\
+\bottomrule
+\multicolumn{7}{@{}l}{\footnotesize Count: price + log headline count. Scores: price + the five sentiment features without the count.} \\
+\multicolumn{7}{@{}l}{\footnotesize All: price + all six sentiment features, as in Table~\ref{tab:ablation-gain}.}
+\end{tabular}
+\end{utptable}
+
+None of these gains was significant ($q \geq 0.389$). The headline count alone added at most 0.010, at three days with lagged features, and the sentiment scores without the count produced a similar lagged gain of 0.016 at that horizon. The three-day lagged gain was therefore not explained by the number of headlines alone. As it appeared with either group of features and with almost every sentiment model, and was not significant, it could not be attributed to the content of any particular sentiment signal.
+
+The same-day gain at five days behaved differently. It came entirely from the sentiment scores (+0.014), as the count alone added nothing ($-$0.003), and it disappeared when the features were lagged. This pattern is consistent with the sentiment of a headline reflecting the price move of its own day, rather than predicting later moves.
 
 \begin{figure}[htbp]
 \centering
@@ -285,9 +305,9 @@ The prediction experiment by outlet is presented in Table~\ref{tab:source-downst
 \label{sec:discussion}
 The main finding was that FinBERT sentiment from news headlines did not significantly improve the prediction of stock movement beyond price and volume features. XGBoost and the class-weighted LSTM both led to this conclusion under corrected significance tests, and it was unchanged when the sentiment was lagged to remove possible look-ahead. All of the models also remained close to chance, and none improved on a zero-return forecast. These results are consistent with the efficient market hypothesis, according to which publicly available information is rapidly reflected in prices \parencite{fama1970efficient}. The news-source results point in the same direction: sentiment agreed with price moves around the publication day, but this agreement fell to the level of chance once that day was excluded. Sentiment appeared to describe price moves as they occurred, rather than to anticipate later ones.
 
-This result does not prove that sentiment has no predictive value. The confidence intervals for XGBoost spanned approximately $\pm 0.013$ to $\pm 0.016$ around the estimates, so a small effect could have gone undetected. The 5-day XGBoost gain had a confidence interval that excluded zero before correction for multiple comparisons, but it was not significant after correction and did not survive lagging. The correct conclusion is therefore that no reliable gain was detected, and not that the gain is zero.
+This result does not prove that sentiment has no predictive value. The confidence intervals for XGBoost spanned approximately $\pm 0.013$ to $\pm 0.016$ around the estimates, so a gain smaller than about 0.013 in macro-F1 could not have been distinguished from zero with the available test data, and a small effect could have gone undetected. The 5-day XGBoost gain had a confidence interval that excluded zero before correction for multiple comparisons, but it was not significant after correction and did not survive lagging. The correct conclusion is therefore that no reliable gain was detected, and not that the gain is zero.
 
-These findings were weaker than some of those reported in the literature reviewed in Chapter~2. A FinBERT-LSTM was reported to improve on price-only baselines \parencite{gu2024predicting}, and a modest gain from sentiment was reported for FNSPID \parencite{dong2024fnspid}. The small gains observed in this project were in the same direction but were not statistically reliable. The difference may reflect the matched baselines, walk-forward testing and corrected significance tests used here, although differences in the stocks, periods and models also prevent a direct comparison. The source dependence reported in the literature \parencite{electronics2025comparative} was also observed in this project, in that the outlets differed in sentiment and agreement. However, that study measured classification accuracy, whereas this project measured agreement with price direction, so the values are not directly comparable.
+These findings were weaker than some of those reported in the literature reviewed in Chapter~2. A FinBERT-LSTM was reported to improve on price-only baselines \parencite{gu2024predicting}, and a modest gain from sentiment was reported for FNSPID \parencite{dong2024fnspid}. The small gains observed in this project were in the same direction but were not statistically reliable. The difference may reflect the matched baselines, walk-forward testing and corrected significance tests used here, although differences in the stocks, periods and models also prevent a direct comparison. The source dependence reported by \textcite{liu2025enhancing}, in which the accuracy of FinBERT ranged from 32\% to 76\% across five outlets, was also observed in this project when the publication day was included, with agreement of 53\% to 72\% on INTC. That study appears to have scored sentiment against labels derived from price returns, which is close to the market agreement measured here, although the return window was not stated. The results of this project suggest that such differences between outlets may largely reflect same-day price reactions, as agreement fell to about 50\% for both Nasdaq and Benzinga once the publication day was excluded.
 
 The plain LSTM illustrates why a performance gain should be examined before it is accepted. Its significant result would have supported the opposite conclusion had the predictions not been examined by class. Macro-F1 rewarded the additional down predictions even though they were no more precise than the base rate. The class-weighted variant provided a controlled way to separate this effect from genuine information.
 
