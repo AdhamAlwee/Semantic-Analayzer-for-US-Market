@@ -75,6 +75,13 @@ def main() -> None:
 
         run_count_ablation()
 
+        from src.relevance_ablation import run as run_relevance
+        from src.volatility_target import run as run_volatility
+
+        run_relevance("xgboost")
+        run_relevance("lstm_balanced")
+        run_volatility()
+
         from src.same_day_association import run_same_day_association
 
         run_same_day_association()

@@ -40,10 +40,18 @@ Semantic-Analayzer-for-US-Market/
 │   ├── features.py               # Price features, sentiment features, forward targets
 │   ├── ablation.py               # Price-only vs price+sentiment, walk-forward, bootstrap tests
 │   ├── lstm_model.py             # LSTM (and class-weighted LSTM) for the ablation
-│   ├── model_comparison.py       # FinBERT vs 6 non-agentic sentiment models on labelled text
-│   ├── sentiment_downstream.py   # The same 7 models as sentiment sources for prediction
+│   ├── model_comparison.py       # FinBERT vs 6 non-agentic models + a naive Bayes baseline on labelled text
+│   ├── sentiment_downstream.py   # The same 8 models as sentiment sources for prediction
 │   ├── source_comparison.py      # FinBERT consistency and predictive value per news outlet
+│   ├── lag_robustness.py         # Experiments repeated with sentiment lagged by one trading day
+│   ├── count_ablation.py         # Headline count vs sentiment scores
+│   ├── relevance_ablation.py     # Sentiment from headlines naming the company only
+│   ├── volatility_target.py      # Predicting the size of the move instead of its direction
+│   ├── same_day_association.py   # Sentiment vs returns before, on and after the news day
+│   ├── event_study.py            # Event study and long-short trading test with costs
+│   ├── feature_importance.py     # XGBoost gain importance by feature
 │   └── utils.py                  # yfinance/date helpers
+├── app/demo.py                   # Streamlit demo: score a headline, explore a stock, key results
 ├── data/                         # raw/ (FNSPID ~29 GB, prices) and processed/ (git-ignored)
 ├── results/                      # Committed result tables and figures (see below)
 ├── legacy/                       # FYP I synthetic-data prototype, kept for reference only
@@ -93,11 +101,13 @@ Or step by step:
 python -m src.fnspid_loader         # download FNSPID and extract headlines for STUDY_TICKERS
 python -m src.news_sentiment        # FinBERT scores -> data/processed/daily_sentiment.parquet
 python -m src.ablation              # XGBoost, LSTM, class-weighted LSTM (+ --model to pick one)
-python -m src.model_comparison      # 7 sentiment models x 2 labelled datasets
-python -m src.sentiment_downstream  # the 7 models as sentiment sources for prediction
+python -m src.model_comparison      # 8 sentiment models x 2 labelled datasets
+python -m src.sentiment_downstream  # the 8 models as sentiment sources for prediction
 python -m src.source_comparison     # news-outlet comparison (2018 to mid-2020)
 python -m src.lag_robustness        # experiments repeated with sentiment lagged by one day
 python -m src.count_ablation        # headline count vs sentiment scores
+python -m src.relevance_ablation    # company-naming headlines only (XGBoost + class-weighted LSTM)
+python -m src.volatility_target     # size of the move as the target (RMSE, large-move F1)
 python -m src.same_day_association  # sentiment vs returns before, on and after the news day
 python -m src.event_study           # event study and trading test with transaction costs
 python -m src.feature_importance    # XGBoost gain importance by feature
@@ -126,6 +136,20 @@ python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct
 | `results/model_comparison/` | Text-level benchmark: accuracy/F1, per-class scores, confusion matrices, agreement (Cohen's kappa) |
 | `results/sentiment_downstream/` | Predictive gain from each sentiment model, label agreement on FNSPID headlines |
 | `results/source_comparison/` | Market agreement per outlet, cross-outlet correlation, per-outlet ablation |
+| `results/lag_robustness/` | Ablation, model comparison and source agreement with sentiment lagged by one day |
+| `results/count_ablation/` | Gain from the headline count vs the sentiment scores |
+| `results/relevance_ablation/<model>/` | Gain from company-naming headlines only vs all headlines |
+| `results/volatility_target/` | Size-of-move prediction: RMSE and large-move F1 with and without sentiment |
+| `results/same_day_association/` | Correlation of sentiment with returns before, on and after the news day |
+| `results/event_study/` | Market-adjusted returns around extreme sentiment days; trading test with costs |
+
+### Main finding
+
+Hypothesis: adding FinBERT sentiment to a price-only model significantly improves movement prediction (macro-F1) at 1, 3 or 5 trading days. **Not supported.**
+
+- No significant gain for XGBoost or the class-weighted LSTM, same-day or lagged, after Benjamini-Hochberg correction. The plain LSTM's significant gain is a class-imbalance artifact.
+- Also null: headline count vs scores, company-naming headlines only, size of the move as the target, and all 8 sentiment models.
+- Sentiment correlates with the same day's return (ρ = 0.133) but barely with the next day's (0.027); a sentiment trading rule loses money after costs. Consistent with the efficient market hypothesis.
 
 ---
 
@@ -134,9 +158,10 @@ python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct
 - [x] FNSPID data collection and coverage analysis
 - [x] FinBERT sentiment features (daily, decayed, company-specific, per source)
 - [x] Leakage-free walk-forward ablation at 1/3/5-day horizons (XGBoost, LSTM)
-- [x] FinBERT vs non-agentic models: text benchmark and downstream prediction
+- [x] FinBERT vs non-agentic models and a naive Bayes baseline: text benchmark and downstream prediction
 - [x] News-source comparison
-- [ ] Dissertation write-up
+- [x] Robustness checks: lagged sentiment, headline count, company-only headlines, size-of-move target
+- [x] Dissertation and technical paper
 
 ---
 
