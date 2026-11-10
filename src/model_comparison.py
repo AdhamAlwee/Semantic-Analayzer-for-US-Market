@@ -123,6 +123,7 @@ DATASETS: Dict[str, Callable[[], pd.DataFrame]] = {
 TRAINED_ON = {
     "finbert": {"phrasebank_allagree"},
     "distilroberta_fin": {"phrasebank_allagree"},
+    "naive_bayes": {"phrasebank_allagree"},
 }
 
 
@@ -190,6 +191,40 @@ class VaderClassifier(SentimentClassifier):
         """VADER's neg/neu/pos proportions (they sum to 1) as pseudo-probabilities."""
         scores = [self.analyzer.polarity_scores(t) for t in texts]
         return np.array([[s["neg"], s["neu"], s["pos"]] for s in scores])
+
+
+class NaiveBayesClassifier(SentimentClassifier):
+    """
+    Classical baseline: TF-IDF word unigrams + bigrams and Multinomial Naive Bayes,
+    trained on Financial PhraseBank (Sentences_50Agree, 4,846 sentences).
+
+    Settings are fixed in advance (sklearn defaults, alpha = 1) and were not tuned.
+    The training set contains every AllAgree sentence, so PhraseBank scores are
+    in-sample; the Twitter dataset is the fair test.
+    """
+
+    name = "naive_bayes"
+    family = "Classical (TF-IDF + Naive Bayes)"
+    checkpoint = "sklearn MultinomialNB, trained on PhraseBank 50Agree"
+
+    def __init__(self):
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.naive_bayes import MultinomialNB
+        from sklearn.pipeline import make_pipeline
+
+        train = load_phrasebank("Sentences_50Agree")
+        self.pipeline = make_pipeline(
+            TfidfVectorizer(lowercase=True, ngram_range=(1, 2), min_df=2, sublinear_tf=True),
+            MultinomialNB(alpha=1.0),
+        )
+        self.pipeline.fit(train["text"].astype(str), train["label"])
+        self._order = [list(self.pipeline.classes_).index(label) for label in LABELS]
+
+    def predict_proba(self, texts: List[str]) -> np.ndarray:
+        return self.pipeline.predict_proba(list(texts))[:, self._order]
+
+    def close(self) -> None:
+        pass
 
 
 class HFSequenceClassifier(SentimentClassifier):
@@ -393,6 +428,7 @@ MODEL_FACTORIES: Dict[str, Callable[[], SentimentClassifier]] = {
         "cardiffnlp/twitter-roberta-base-sentiment-latest",
     ),
     "vader": VaderClassifier,
+    "naive_bayes": NaiveBayesClassifier,
     "bart_mnli_zeroshot": ZeroShotNLIClassifier,
     "qwen2.5_1.5b_instruct": PromptedLLMClassifier,
 }
@@ -480,6 +516,16 @@ def save_confusion_plots(predictions: pd.DataFrame, model_names: List[str], path
     plt.close(fig)
 
 
+def _merge_rows(new: pd.DataFrame, path: Path, merge: bool) -> pd.DataFrame:
+    """Replace this run's (dataset, model) rows in an earlier CSV and keep the rest."""
+    if not merge or not path.exists():
+        return new
+    old = pd.read_csv(path)
+    done = set(zip(new["dataset"], new["model"]))
+    keep = old[[(d, m) not in done for d, m in zip(old["dataset"], old["model"])]]
+    return pd.concat([keep, new], ignore_index=True)
+
+
 def run_benchmark(
     dataset_names: List[str],
     model_names: List[str],
@@ -524,21 +570,45 @@ def run_benchmark(
                   f"({result.ms_per_text:.1f} ms/text)")
         clf.close()
 
-    summary = pd.DataFrame([r.__dict__ for r in results]).sort_values(
-        ["dataset", "macro_f1"], ascending=[True, False]
-    )
+    summary = pd.DataFrame([r.__dict__ for r in results])
+    per_class = pd.DataFrame(per_class_rows)
+    # A full-data run of some models keeps the earlier rows of the other models,
+    # so one model can be added without re-running the rest.
+    merge = limit is None
+    summary = _merge_rows(summary, OUTPUT_DIR / "summary.csv", merge)
+    summary = summary.sort_values(["dataset", "macro_f1"], ascending=[True, False])
     summary.to_csv(OUTPUT_DIR / "summary.csv", index=False)
-    pd.DataFrame(per_class_rows).to_csv(OUTPUT_DIR / "per_class.csv", index=False)
+    _merge_rows(per_class, OUTPUT_DIR / "per_class.csv", merge).to_csv(
+        OUTPUT_DIR / "per_class.csv", index=False)
 
+    ran = set(summary["model"]) | set(model_names)
+    all_models = [m for m in MODEL_FACTORIES if m in ran]
     for ds, pred_df in predictions.items():
-        pred_df.to_csv(OUTPUT_DIR / f"predictions_{ds}.csv", index=False)
-        agreement_matrix(pred_df, model_names).to_csv(OUTPUT_DIR / f"agreement_kappa_{ds}.csv")
-        save_confusion_plots(pred_df, model_names, OUTPUT_DIR / f"confusion_{ds}.png")
+        path = OUTPUT_DIR / f"predictions_{ds}.csv"
+        if merge and path.exists():
+            old = pd.read_csv(path)
+            # Compare texts ignoring whitespace: Git may rewrite line endings in the CSV.
+            def norm(s):
+                return s.astype(str).str.split().str.join(" ")
 
-    with open(OUTPUT_DIR / "run_config.json", "w", encoding="utf-8") as f:
-        json.dump({"datasets": dataset_names, "models": model_names, "limit": limit,
-                   "device": DEVICE,
-                   "checkpoints": {r.model: r.checkpoint for r in results}}, f, indent=2)
+            if len(old) == len(pred_df) and (norm(old["text"]) == norm(pred_df["text"])).all():
+                for m in all_models:
+                    if m not in pred_df.columns and m in old.columns:
+                        pred_df[m] = old[m]
+        present = [m for m in all_models if m in pred_df.columns]
+        pred_df = pred_df[["text", "label"] + present]
+        pred_df.to_csv(path, index=False)
+        agreement_matrix(pred_df, present).to_csv(OUTPUT_DIR / f"agreement_kappa_{ds}.csv")
+        save_confusion_plots(pred_df, present, OUTPUT_DIR / f"confusion_{ds}.png")
+
+    config_path = OUTPUT_DIR / "run_config.json"
+    checkpoints = {}
+    if merge and config_path.exists():
+        checkpoints = json.loads(config_path.read_text(encoding="utf-8")).get("checkpoints", {})
+    checkpoints.update({r.model: r.checkpoint for r in results})
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump({"datasets": dataset_names, "models": all_models, "limit": limit,
+                   "device": DEVICE, "checkpoints": checkpoints}, f, indent=2)
 
     print(f"\n[OK] Results written to {OUTPUT_DIR}")
     print(summary[["dataset", "model", "accuracy", "macro_f1", "ms_per_text",

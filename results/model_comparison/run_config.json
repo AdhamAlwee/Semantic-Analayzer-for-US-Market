@@ -9,6 +9,7 @@
     "distilroberta_fin",
     "roberta_twitter",
     "vader",
+    "naive_bayes",
     "bart_mnli_zeroshot",
     "qwen2.5_1.5b_instruct"
   ],
@@ -21,6 +22,7 @@
     "roberta_twitter": "cardiffnlp/twitter-roberta-base-sentiment-latest",
     "vader": "vaderSentiment",
     "bart_mnli_zeroshot": "facebook/bart-large-mnli",
-    "qwen2.5_1.5b_instruct": "Qwen/Qwen2.5-1.5B-Instruct"
+    "qwen2.5_1.5b_instruct": "Qwen/Qwen2.5-1.5B-Instruct",
+    "naive_bayes": "sklearn MultinomialNB, trained on PhraseBank 50Agree"
   }
 }
