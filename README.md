@@ -96,6 +96,17 @@ python -m src.ablation              # XGBoost, LSTM, class-weighted LSTM (+ --mo
 python -m src.model_comparison      # 7 sentiment models x 2 labelled datasets
 python -m src.sentiment_downstream  # the 7 models as sentiment sources for prediction
 python -m src.source_comparison     # news-outlet comparison (2018 to mid-2020)
+python -m src.lag_robustness        # experiments repeated with sentiment lagged by one day
+python -m src.count_ablation        # headline count vs sentiment scores
+python -m src.same_day_association  # sentiment vs returns before, on and after the news day
+python -m src.event_study           # event study and trading test with transaction costs
+python -m src.feature_importance    # XGBoost gain importance by feature
+```
+
+Interactive demo (score a headline, explore a stock, key results):
+
+```bash
+streamlit run app/demo.py
 ```
 
 A larger prompted LLM can be added to the text benchmark on a bigger GPU (e.g. Colab):

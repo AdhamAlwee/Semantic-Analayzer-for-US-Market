@@ -8,7 +8,9 @@ Run the full FYP II pipeline end to end.
   5. sentiment_downstream the same models as sentiment sources for prediction
   6. source_comparison    FinBERT consistency and predictive value per news outlet
   7. lag_robustness       the main experiments with sentiment lagged by one trading day,
-                          and the headline count tested apart from the sentiment scores
+                          the headline count tested apart from the sentiment scores,
+                          the correlation of sentiment with returns before, on and after its day,
+                          and an event study, a trading test and XGBoost feature importance
 
 Each step caches its outputs, so re-running skips work that is already done
 (except the experiments themselves, which are cheap to repeat).
@@ -72,6 +74,19 @@ def main() -> None:
         from src.count_ablation import run_count_ablation
 
         run_count_ablation()
+
+        from src.same_day_association import run_same_day_association
+
+        run_same_day_association()
+
+        from src.event_study import run_event_study
+        from src.feature_importance import OUTPUT_DIR as FI_DIR, importance_shares, plot as plot_importance
+
+        run_event_study()
+        FI_DIR.mkdir(parents=True, exist_ok=True)
+        shares = importance_shares()
+        shares.to_csv(FI_DIR / "importance_shares.csv", index=False)
+        plot_importance(shares, FI_DIR / "feature_importance.png")
 
 
 if __name__ == "__main__":

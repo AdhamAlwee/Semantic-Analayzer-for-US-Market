@@ -11,7 +11,7 @@ For the third objective, XGBoost and LSTM models were compared with and without 
 
 For the fourth objective, the models were evaluated at horizons of one, three and five trading days. Macro-F1 remained between 0.291 and 0.352 at all horizons, close to chance, and no model improved on a zero-return forecast when the stocks were pooled.
 
-The findings are consistent with the efficient market hypothesis. Sentiment was associated with price moves around publication but provided no reliable information about later moves. The project also showed the value of testing a performance gain before accepting it, since a significant result from the plain LSTM and an apparent difference between news outlets both failed under closer examination.
+The findings are consistent with the efficient market hypothesis. Sentiment was associated with price moves around publication but provided no reliable information about later moves. Its correlation with the same day's return was 0.133 and was significant for all five stocks, whereas its correlation with the next day's return was only 0.027, and with the day after, zero. In economic terms, a trading rule based on the most positive and negative sentiment days did not earn more than buying and holding the stocks on the day that could always be traded, and it lost money on every tradable day once transaction costs of 10 basis points per side were included. The project also showed the value of testing a performance gain before accepting it, since a significant result from the plain LSTM and an apparent difference between news outlets both failed under closer examination.
 
 \section{Recommendation}
 The following recommendations are made for future work:
@@ -19,7 +19,7 @@ The following recommendations are made for future work:
 \item a news source with exact publication times should be used, so that news can be aligned with the market close and intraday effects can be studied;
 \item a longer test period or a larger set of stocks should be used, as the tests in this project could not distinguish gains smaller than about 0.013 in macro-F1 from zero;
 \item the source comparison should be repeated with a dataset in which several outlets are available for a longer period, as the second part of this comparison was limited to about five months of testing;
-\item more stocks, including smaller companies with less news coverage, should be tested, as prices may absorb news more slowly for such companies;
+\item more stocks, including smaller companies with less news coverage, should be tested, as prices have been found to absorb news more slowly for such companies \parencite{hong2000bad, ke2019predicting};
 \item full article text should be evaluated in place of headlines; and
 \item a larger open LLM, and a fine-tuned FinBERT, could be included in the comparison of sentiment models.
 \end{itemize}

@@ -3,7 +3,7 @@
 This chapter reviews the role of sentiment in stock prediction, the language models and datasets used for financial sentiment analysis, and the research gaps addressed by this project.
 
 \section{Stock Market Prediction and the Role of Sentiment}
-The efficient market hypothesis holds that publicly available information, including news, is rapidly incorporated into asset prices \parencite{fama1970efficient}. This would limit the value of any single public signal, such as news sentiment. In practice, however, the incorporation of information may be neither instantaneous nor complete, and short-term reactions to news events may leave a window in which sentiment carries predictive value at short horizons. Media pessimism has been found to predict downward pressure on market prices, followed by a reversion towards fundamentals \parencite{tetlock2007giving}.
+The efficient market hypothesis holds that publicly available information, including news, is rapidly incorporated into asset prices \parencite{fama1970efficient}. This would limit the value of any single public signal, such as news sentiment. In practice, however, the incorporation of information may be neither instantaneous nor complete, and short-term reactions to news events may leave a window in which sentiment carries predictive value at short horizons. Media pessimism has been found to predict downward pressure on market prices, followed by a reversion towards fundamentals \parencite{tetlock2007giving}. At the firm level, the share of negative words in news about S\&P 500 companies predicted lower earnings, and prices briefly under-reacted to this information \parencite{tetlock2008more}. However, such effects have been found to be short-lived. In more than 900,000 news stories, daily news predicted returns for only about one to two days \parencite{heston2017news}. In about 12 million timestamped Dow Jones Newswires articles, the price response to news sentiment was largest on the day of publication, with a smaller response on the following day that had been fully absorbed within about three days \parencite{ke2019predicting}. This delay was longer and the response larger for small and volatile stocks, which is consistent with evidence that information spreads more slowly for smaller firms with less analyst coverage \parencite{hong2000bad}.
 Industry surveys report sentiment among the most widely adopted categories of alternative data, but describe it as one input to be combined with prices, fundamentals or other data \parencite{aima2024casting}. The same framing was adopted in this project, in which sentiment was treated as a candidate feature to be tested for marginal predictive value and not as a standalone trading signal.
 
 \section{FinBERT and Domain-Specific Language Models}
@@ -15,7 +15,6 @@ Recent studies have combined FinBERT sentiment with sequential and tree-based pr
 \section{General-Purpose LLMs versus Domain-Specific Models}
 A parallel line of work has compared FinBERT with general-purpose LLMs on financial sentiment classification. As summarised in Table~\ref{tab:lit-llm}, the results are inconsistent and do not uniformly favour either approach.
 
-% TODO: Check the Fatouros (56.1%) and Lefort rows against the full papers; their abstracts do not give these figures. The other rows were checked on 9 Nov 2026.
 \begin{longtable}{@{}P{4.3cm}P{3.6cm}P{2.3cm}P{3.0cm}@{}}
 \caption{Reported FinBERT and General LLM Sentiment Accuracy}
 \label{tab:lit-llm}\\
@@ -29,12 +28,12 @@ A parallel line of work has compared FinBERT with general-purpose LLMs on financ
 \endhead
 \bottomrule
 \endlastfoot
-Financial-sentiment benchmark \parencite{fatouros2023transforming} & FinBERT and prompted ChatGPT & 56.1\% & Higher across all four prompts \\
+Forex news headlines \parencite{fatouros2023transforming} & FinBERT and prompted ChatGPT & 56.1\% & 73.0--79.0\%, across four prompts \\
 NGX All-Share Index \parencite{ai2024innovative} & FinBERT, GPT-4 and logistic regression & 63.3\% & 54.2\% \\
 Financial-sentiment benchmark of 5,843 sentences \parencite{vidhya2025finetuning} & FinBERT and fine-tuned GPT-4o mini & 75.8\% & 76.5\% \\
 Five news sources \parencite{liu2025enhancing} & FinBERT and GPT-2 & 32.2--75.6\%, by source & 34.4--65.5\%, by source \\
 New York Times news by sector \parencite{electronics2025comparative} & FinBERT and prompted GPT-4o & Lower than GPT-4o & Up to 10\% higher, by sector \\
-Market-reaction classification \parencite{arxiv2024optimizing} & FinBERT, DistilRoBERTa and zero-shot GPT-4 & Comparable to GPT-4 & Marginal improvement despite far more parameters \\
+Market reaction to Bloomberg headlines \parencite{arxiv2024optimizing} & FinBERT, DistilRoBERTa and zero-shot GPT-4 & Weighted F1 0.44 & Weighted F1 0.47 \\
 \end{longtable}
 
 Three observations follow from this comparison. First, general LLMs have outperformed FinBERT when carefully prompted or fine-tuned, but not consistently when used with a fixed prompt. Second, the accuracy of FinBERT has been highly dependent on the source, varying by more than 40 percentage points across news outlets in a single study, which motivated the multi-source evaluation in this project. Third, several of the studies favouring general LLMs relied on proprietary, API-based models, which are costly at the scale of a multi-year backtest and are not fully reproducible, as the underlying model may change.

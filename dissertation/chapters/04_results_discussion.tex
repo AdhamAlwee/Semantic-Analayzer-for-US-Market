@@ -147,6 +147,15 @@ Class-weighted LSTM & 1 day & 0.000 & $-$0.017 to +0.015 & 0.992 \\
 \label{fig:ablation-xgb}
 \end{figure}
 
+The importance that XGBoost assigned to each feature, measured as its share of the total gain of the model, is shown in Figure~\ref{fig:importance}. The six sentiment features received 28.7\% of the total, close to the 30\% that six of the 20 features would receive if all were used equally. The four most important features were all price features, led by the 20-day volatility, and the decayed sentiment score was the most important sentiment feature. However, the shares of all features lay between 4.6\% and 6.0\%, close to the equal share of 5\%. The model therefore relied on no feature strongly, which is consistent with performance close to chance. As gain importance also counts splits that fit noise, it shows how often a feature was used, and not that the feature carried predictive information.
+
+\begin{figure}[htbp]
+\centering
+\FramedGraphic{width=0.85\textwidth}{feature_importance/feature_importance.png}
+\caption{Share of XGBoost Gain Importance by Feature, Price-and-Sentiment Models, Averaged over Stocks and Horizons}
+\label{fig:importance}
+\end{figure}
+
 The gains of the plain LSTM were significant, but further analysis showed that they did not reflect useful information. As shown in Table~\ref{tab:lstm-artifact}, the price-only LSTM rarely predicted the down class, doing so on only 7--12\% of test days. Sentiment raised this share to 20--25\%, which improved macro-F1 because that metric penalises a neglected class. However, the precision of the down predictions remained close to the share of days that were actually down. The additional down predictions were therefore no more reliable than chance.
 
 \begin{utptable}{Down-Class Predictions of the Plain LSTM, All Stocks Pooled}
@@ -301,9 +310,115 @@ The prediction experiment by outlet is presented in Table~\ref{tab:source-downst
 \end{tabular}
 \end{utptable}
 
+\section{Examples of FinBERT Classifications}
+\label{sec:examples}
+To show how these measures arise, Table~\ref{tab:examples} lists examples of headlines that named the company, with their FinBERT score and the market-adjusted return of the stock on the news day. The examples were selected from the most confident classifications and the largest same-day moves, so they illustrate typical cases and are not a random sample.
+
+\begin{utptable}{Examples of FinBERT Scores on FNSPID Headlines, with the Market-Adjusted Return on the News Day}
+\label{tab:examples}
+\begin{tabular}{@{}p{1.9cm}p{8.2cm}rr@{}}
+\toprule
+\textbf{Stock, date} & \textbf{Headline (outlet)} & \textbf{Score} & \textbf{Return} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Correct, but describing a move that had already occurred}} \\
+SBUX 2018-11-02 & Starbucks Corp shares are up 10.5\% after the company beat Q4 earnings estimates. (Benzinga) & +0.93 & +10.3\% \\
+INTC 2020-07-24 & Intel shares dive on apparent manufacturing retreat; rival chip stocks jump (Nasdaq) & $-$0.95 & $-$15.6\% \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Sentiment about another company}} \\
+INTC 2022-10-28 & Intel's Raptor Lake Is a Big Problem for AMD (Nasdaq) & $-$0.87 & +8.3\% \\
+MRK 2021-10-01 & Merck COVID-19 pill success slams Moderna shares, shakes up healthcare sector (Nasdaq) & $-$0.84 & +7.2\% \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Tone differing from the market's interpretation}} \\
+INTC 2022-10-28 & Intel (NASDAQ:INTC) to Cut Workforce as Part of Massive Cost Reduction Efforts (Nasdaq) & $-$0.96 & +8.3\% \\
+WFC 2021-01-15 & Wells Fargo posts higher quarterly profit (Nasdaq) & +0.89 & $-$7.1\% \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Outlets disagreeing on the same day}} \\
+INTC 2019-01-24 & Intel Tumbles After Earnings \& Revenue Miss, Cuts Outlook (Benzinga) & $-$0.95 & \\
+ & Intel Forecasts Another Record Year; Raises Dividend - Quick Facts (Nasdaq) & +0.91 & \\
+SBUX 2020-04-08 & Starbucks Qtr.-To-Date Through Mar. 11 US Comps Up 8\% Year Over Year (Benzinga) & +0.92 & \\
+ & Starbucks sees 47\% drop in second-quarter earnings on coronavirus hit (Nasdaq) & $-$0.97 & \\
+\bottomrule
+\multicolumn{4}{@{}l}{\footnotesize Score: FinBERT $P(\text{positive}) - P(\text{negative})$. Return: stock minus SPY, close $t-1$ to close $t$.}
+\end{tabular}
+\end{utptable}
+
+The examples show three reasons why a correct classification did not translate into predictive value. First, many confident headlines reported a price move that had already taken place, such as a rise of 10.5\% after an earnings beat, so their sentiment followed the price rather than preceding it. Second, FinBERT scored the tone of a headline and not its subject, so a headline that was negative for a competitor, such as AMD or Moderna, could be scored as negative for the tagged company even though its stock rose. Third, the tone of a headline could differ from the market's interpretation: a workforce reduction was scored as negative but was received as a positive cost measure, and a rise in profit was scored as positive although the stock fell, presumably because the result fell short of expectations. The disagreement between outlets reflected the selection of facts as much as the classifier, as the same earnings report produced headlines about a miss and about a record year.
+
+\section{Sentiment and Returns Around the Publication Day}
+\label{sec:timing-results}
+The correlation between daily FinBERT sentiment and returns in each window is shown in Table~\ref{tab:timing-results}. Sentiment was most strongly related to the return on its own day. The pooled correlation was 0.133 (95\% CI 0.110--0.160), and the same-day correlation was significant for every one of the five stocks, ranging from 0.072 for SBUX to 0.232 for WFC.
+
+\begin{utptable}{Spearman Correlation Between Daily FinBERT Sentiment on Day $t$ and Returns in Each Window, 2018--2023}
+\label{tab:timing-results}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textbf{Stock} & \textbf{Days} & \textbf{Previous} & \textbf{Same} & \textbf{Next} & \textbf{Day} \\
+ & & \textbf{day} & \textbf{day} & \textbf{day} & \textbf{after} \\
+\midrule
+INTC & 1,427 & 0.073* & 0.173* & 0.066* & $-$0.026 \\
+SBUX & 1,335 & 0.019 & 0.072* & 0.040 & 0.006 \\
+WFC & 1,340 & 0.021 & 0.232* & 0.034 & 0.065* \\
+CVX & 1,389 & 0.053 & 0.076* & $-$0.039 & $-$0.029 \\
+MRK & 1,335 & 0.055 & 0.090* & 0.049 & $-$0.015 \\
+\midrule
+Pooled & 6,826 & 0.046* & 0.133* & 0.027* & 0.004 \\
+\bottomrule
+\multicolumn{6}{@{}l}{\footnotesize * $q < 0.05$ after Benjamini--Hochberg correction over all 24 tests.}
+\end{tabular}
+\end{utptable}
+
+The relationship weakened sharply after the publication day. The pooled correlation with the next day's return was 0.027 (95\% CI 0.005--0.052, $q = 0.044$), about one fifth of the same-day value, and it was significant only for INTC among the individual stocks. As a headline dated $t$ may have been published after the close of day $t$, part of this small next-day correlation may be a same-day reaction that was assigned to the wrong day. The correlation with the return on the day after was 0.004 and was not significant. Sentiment was also weakly related to the previous day's return (0.046), which suggests that some headlines reported moves that had already occurred.
+
+The event study in Figure~\ref{fig:event-study} shows the same pattern in terms of returns. On the news day, the market-adjusted return of the most positive quintile exceeded that of the most negative quintile by 0.54 percentage points ($t = 8.1$). The difference was 0.20 points on the day before ($t = 3.0$) and 0.15 points on the day after ($t = 2.5$), and from the second day onwards it was below 0.07 points and not significant ($|t| < 1$). The two cumulative lines therefore separated mainly on the news day and then ran almost flat. By day $+5$, the most positive days had gained 0.55\% and the most negative days had lost 0.85\% relative to the market, most of which had already occurred by the close of the news day. The lines had also drifted apart before the news, by 0.60 percentage points by the close of day $-1$, mainly through the negative group, which agrees with the earlier finding that many headlines reported moves that had already occurred.
+
+\begin{figure}[htbp]
+\centering
+\FramedGraphic{width=0.9\textwidth}{event_study/event_study.png}
+\caption[Cumulative Market-Adjusted Return Around Extreme Sentiment Days]{Cumulative Market-Adjusted Return Around the Most Positive and Most Negative FinBERT Sentiment Days, Five Stocks, 2018--2023, with 95\% Confidence Bands}
+\label{fig:event-study}
+\end{figure}
+
+These results show that FinBERT sentiment did contain information about the market, but almost entirely about the move on its own day. This pattern explains why the sentiment did not improve the prediction of later movement in the ablation study.
+
+\section{Economic Significance}
+\label{sec:trading-results}
+The results of the trading rule are presented in Table~\ref{tab:trading-results}. Holding the positions on the news day itself would have earned 54.7\% a year before costs, which confirms the strength of the same-day association, but this return could not have been obtained, as the news was not known at the start of the day. On the following day, the rule earned 24.7\% a year before costs (95\% CI 2.0--43.3\%), which was marginally significant. However, this holding period could be traded only if the headlines had appeared before the close, which could not be confirmed for 99.8\% of the headlines. On the second day, which could always be traded, the return fell to 11.8\% and was not significant (95\% CI $-$8.5 to 29.2\%), below the 15.8\% of simply holding the five stocks.
+
+\begin{utptable}{Annualised Market-Adjusted Return of the Sentiment Trading Rule, 2021--2023}
+\label{tab:trading-results}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Strategy} & \textbf{Return (\%)} & \textbf{95\% CI (\%)} & \textbf{Sharpe} \\
+\midrule
+News day, before costs (not tradable) & 54.7 & 34.1 to 75.5 & 2.98 \\
+News day, after costs (not tradable) & 9.2 & $-$11.4 to 29.6 & 0.50 \\
+Next day, before costs & 24.7 & 2.0 to 43.3 & 1.29 \\
+Next day, after costs & $-$20.8 & $-$43.6 to $-$2.7 & $-$1.08 \\
+Second day, before costs & 11.8 & $-$8.5 to 29.2 & 0.57 \\
+Second day, after costs & $-$33.7 & $-$54.2 to $-$16.9 & $-$1.62 \\
+\midrule
+Buy and hold, five stocks & 15.8 & $-$3.5 to 33.2 & 0.87 \\
+Buy and hold, SPY & 11.1 & $-$7.0 to 28.7 & 0.63 \\
+\bottomrule
+\multicolumn{4}{@{}l}{\footnotesize Returns are 252 times the mean daily return. Costs: 10 basis points per side.} \\
+\multicolumn{4}{@{}l}{\footnotesize The trading rule is market-adjusted; the buy-and-hold returns are not.}
+\end{tabular}
+\end{utptable}
+
+Transaction costs removed every gain. As the rule opened and closed its positions every day, a cost of 10 basis points per side reduced the annual return by about 45 percentage points, so that both tradable versions lost money: $-$20.8\% a year on the next day and $-$33.7\% on the second day. Even under the favourable assumption that every headline was published before the close, the sentiment signal could not have been traded profitably by this simple rule. The cumulative returns are shown in Figure~\ref{fig:trading}.
+
+\begin{figure}[htbp]
+\centering
+\FramedGraphic{width=0.9\textwidth}{event_study/trading_test.png}
+\caption{Cumulative Market-Adjusted Return of the Sentiment Trading Rule, 2021--2023}
+\label{fig:trading}
+\end{figure}
+
 \section{Discussion}
 \label{sec:discussion}
-The main finding was that FinBERT sentiment from news headlines did not significantly improve the prediction of stock movement beyond price and volume features. XGBoost and the class-weighted LSTM both led to this conclusion under corrected significance tests, and it was unchanged when the sentiment was lagged to remove possible look-ahead. All of the models also remained close to chance, and none improved on a zero-return forecast. These results are consistent with the efficient market hypothesis, according to which publicly available information is rapidly reflected in prices \parencite{fama1970efficient}. The news-source results point in the same direction: sentiment agreed with price moves around the publication day, but this agreement fell to the level of chance once that day was excluded. Sentiment appeared to describe price moves as they occurred, rather than to anticipate later ones.
+The main finding was that FinBERT sentiment from news headlines did not significantly improve the prediction of stock movement beyond price and volume features. XGBoost and the class-weighted LSTM both led to this conclusion under corrected significance tests, and it was unchanged when the sentiment was lagged to remove possible look-ahead. All of the models also remained close to chance, and none improved on a zero-return forecast. These results are consistent with the efficient market hypothesis, according to which publicly available information is rapidly reflected in prices \parencite{fama1970efficient}. The news-source results point in the same direction: sentiment agreed with price moves around the publication day, but this agreement fell to the level of chance once that day was excluded. Sentiment appeared to describe price moves as they occurred, rather than to anticipate later ones. The correlation analysis in Section~\ref{sec:timing-results} confirmed this directly: sentiment was significantly correlated with the same day's return for every stock, but the correlation fell to about one fifth of that value on the next day and to zero on the day after.
+
+This timing pattern agrees with large-scale studies in finance. Using exact timestamps for about 12 million newswire articles, \textcite{ke2019predicting} found that the association between sentiment and returns was strongest on the day of publication, weaker on the day before, and weakest, though still present, on the following day. The same ordering was observed in this project, with correlations of 0.133 on the same day, 0.046 on the previous day and 0.027 on the next day. Similarly, \textcite{heston2017news} found that daily news predicted returns for only one to two days. The next-day effect in those studies was detected across thousands of stocks and was concentrated in small and volatile firms \parencite{ke2019predicting}. With five large, heavily covered stocks and date-only timestamps, an effect of that size would not be expected to produce a detectable gain in this project.
 
 This result does not prove that sentiment has no predictive value. The confidence intervals for XGBoost spanned approximately $\pm 0.013$ to $\pm 0.016$ around the estimates, so a gain smaller than about 0.013 in macro-F1 could not have been distinguished from zero with the available test data, and a small effect could have gone undetected. The 5-day XGBoost gain had a confidence interval that excluded zero before correction for multiple comparisons, but it was not significant after correction and did not survive lagging. The correct conclusion is therefore that no reliable gain was detected, and not that the gain is zero.
 
@@ -313,12 +428,30 @@ The plain LSTM illustrates why a performance gain should be examined before it i
 
 The sentiment-model comparison also showed that the choice of model cannot be settled from a text benchmark alone. VADER and BART-MNLI scored lowest on labelled text, but their lagged gains at three days were comparable with those of the finance-domain models. The ranking of the models also changed when the sentiment was lagged. As none of the gains was significant, accuracy on labelled text and usefulness for prediction could not be shown to be related in either direction. FinBERT remained a reasonable choice, given its balanced performance on labelled text and its low computational cost, but these results do not show that it is the best predictor.
 
-Several limitations apply to these findings:
-\begin{itemize}
-\item FNSPID timestamps are date-only, so news could not be aligned with the market close, and the effect of news within the day could not be studied;
-\item only headlines were used, and not full article text;
-\item the outlets other than Nasdaq were available only until June 2020, and Nasdaq supplied 85.7\% of the headlines, so the source comparison was limited to a short period;
-\item the five stocks were selected for their news coverage, so the results may not generalise to smaller or less covered stocks;
-\item hyperparameters were fixed and not tuned, in order to keep the comparisons matched, so better-tuned models might perform differently; and
-\item the LLM was limited to 1.5 billion parameters by the available hardware, so the results do not extend to larger LLMs.
-\end{itemize}
+\section{Threats to Validity}
+\label{sec:validity}
+The threats to the conclusions of this project are grouped in Table~\ref{tab:validity} by type, following the usual distinction between internal validity (whether the results are caused by what is claimed), external validity (whether they generalise) and construct validity (whether the measures capture the intended concepts), together with the steps taken to address each threat.
+
+\begin{utptable}{Threats to Validity and How They Were Addressed}
+\label{tab:validity}
+\begin{tabular}{@{}p{1.9cm}p{5.6cm}p{5.6cm}@{}}
+\toprule
+\textbf{Type} & \textbf{Threat} & \textbf{How it was addressed} \\
+\midrule
+Internal & Date-only timestamps may place after-close news on the news day (look-ahead) & All experiments repeated with sentiment lagged by one day; the conclusion was unchanged \\
+ & Class imbalance can produce a gain in macro-F1 without new information & Predictions examined by class; class-weighted LSTM added \\
+ & Information from the test years may leak into training & Walk-forward splits with an $h$-day gap; class thresholds and trading cut-offs set from training data only \\
+ & Many comparisons make some significant results likely by chance & Benjamini--Hochberg correction over all tests \\
+ & Tuning could favour one feature set & Hyperparameters fixed and identical for every feature set \\
+\midrule
+External & Five large, heavily covered stocks & One stock from each of five sectors; consistent pattern across all five; generalisation to smaller stocks left to future work \\
+ & One dataset, with outlets other than Nasdaq only until June 2020 & Source comparison treated as exploratory; coverage reported \\
+ & One test period, 2021--2023 & Results reported by test year; detectable gain of about 0.013 stated \\
+\midrule
+Construct & Headlines rather than full articles & Stated as a limitation; full text recommended \\
+ & Macro-F1 may not reflect economic value & Trading rule evaluated before and after costs \\
+ & FinBERT scores the tone of a headline, not its subject & Company-mention feature set tested; examples examined \\
+ & LLM limited to 1.5 billion parameters by hardware & Stated as a limitation; larger LLM recommended \\
+\bottomrule
+\end{tabular}
+\end{utptable}

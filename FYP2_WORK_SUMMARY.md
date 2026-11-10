@@ -254,6 +254,76 @@ XGBoost was re-run with the log headline count alone and with the five sentiment
 - The lagged 3-day gain is not explained by the headline count alone: the scores without the count give a similar gain.
 - The same-day 5-day gain comes entirely from the scores and disappears when lagged, which fits sentiment reflecting the same day's price move.
 
+### When is sentiment related to returns?
+
+**Code:** `src/same_day_association.py` → `results/same_day_association/`
+
+Spearman correlation between daily mean FinBERT sentiment on day t and the return in four windows, 2018–2023, days with news only. The 95% CIs come from a block bootstrap (10-day blocks within each stock), with BH correction over all 24 tests.
+
+| Stock | Previous day | Same day | Next day | Day after |
+|---|---|---|---|---|
+| INTC | 0.073* | 0.173* | 0.066* | −0.026 |
+| SBUX | 0.019 | 0.072* | 0.040 | 0.006 |
+| WFC | 0.021 | 0.232* | 0.034 | 0.065* |
+| CVX | 0.053 | 0.076* | −0.039 | −0.029 |
+| MRK | 0.055 | 0.090* | 0.049 | −0.015 |
+| **Pooled** | 0.046* | **0.133*** | 0.027* | 0.004 |
+
+\* q < 0.05
+
+- **Sentiment does carry market information, but about its own day.** The same-day correlation is significant for every stock.
+- The next-day correlation is about one fifth as large (pooled q = 0.044, only INTC on its own). Some of it may come from after-close headlines dated to the wrong day.
+- By the day after, the correlation is zero.
+- This explains why the ablation found no reliable gain for predicting later movement.
+
+---
+
+## 6b. What the signal means in returns
+
+**Code:** `src/event_study.py` → `results/event_study/`; `src/feature_importance.py` → `results/feature_importance/`
+
+### Event study
+
+Within each stock, news days are split into sentiment quintiles. For the top and bottom quintiles, the market-adjusted return (stock minus SPY) is averaged for days −5 to +5.
+
+| Day | Gap between top and bottom quintile (percentage points) | t |
+|---|---|---|
+| −1 | 0.20 | 3.0 |
+| **0** | **0.54** | **8.1** |
+| +1 | 0.15 | 2.5 |
+| +2 to +5 | below 0.07 | below 1 |
+
+- The two lines separate mainly **on the news day**, then run flat.
+- They also drift apart before the news (0.60 points by day −1), so many headlines report moves that already happened.
+
+### Trading test (2021–2023)
+
+The rule: long the top quintile and short the bottom quintile, with cut-offs set on 2018–2020. Positions are market-adjusted and held for one day. Costs are 10 bp per side.
+
+| Holding day | Before costs | After costs |
+|---|---|---|
+| News day (not tradable) | 54.7% a year, Sharpe 2.98 | 9.2% |
+| Next day (tradable only if news came before the close) | 24.7% (95% CI 2.0–43.3%) | −20.8% |
+| Second day (always tradable) | 11.8%, not significant | −33.7% |
+| Buy and hold, five stocks | 15.8% | |
+
+- **Costs remove every gain**, so the signal can't be traded profitably by this rule.
+
+### Feature importance (XGBoost, price + sentiment)
+
+- The six sentiment features receive 28.7% of the gain importance, close to their equal share of 30%.
+- The top four features are all price features.
+- Every feature gets 4.6–6.0%, near the equal 5%, so the model relies on no feature strongly.
+
+### Headline examples
+
+Dissertation Table 4.x shows real headlines where FinBERT is:
+- right but late, because the headline reports a move that already happened;
+- scoring another company, such as AMD or Moderna;
+- at odds with the market's reading, as with cost cuts or a profit rise below expectations.
+
+It also shows outlets disagreeing on the same earnings day.
+
 ---
 
 ## 7. Cleanup and engineering
