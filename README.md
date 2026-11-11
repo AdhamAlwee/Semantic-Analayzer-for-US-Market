@@ -47,6 +47,7 @@ Semantic-Analayzer-for-US-Market/
 │   ├── count_ablation.py         # Headline count vs sentiment scores
 │   ├── relevance_ablation.py     # Sentiment from headlines naming the company only
 │   ├── volatility_target.py      # Predicting the size of the move instead of its direction
+│   ├── timestamped_news.py       # Ablation on exactly timestamped Benzinga news (Alpaca API)
 │   ├── same_day_association.py   # Sentiment vs returns before, on and after the news day
 │   ├── event_study.py            # Event study and long-short trading test with costs
 │   ├── feature_importance.py     # XGBoost gain importance by feature
@@ -108,6 +109,7 @@ python -m src.lag_robustness        # experiments repeated with sentiment lagged
 python -m src.count_ablation        # headline count vs sentiment scores
 python -m src.relevance_ablation    # company-naming headlines only (XGBoost + class-weighted LSTM)
 python -m src.volatility_target     # size of the move as the target (RMSE, large-move F1)
+python -m src.timestamped_news      # exactly timestamped Benzinga news; needs ALPACA_API_KEY_ID/SECRET in .env
 python -m src.same_day_association  # sentiment vs returns before, on and after the news day
 python -m src.event_study           # event study and trading test with transaction costs
 python -m src.feature_importance    # XGBoost gain importance by feature
@@ -140,6 +142,7 @@ python -m src.model_comparison --extra-llm Qwen/Qwen2.5-7B-Instruct
 | `results/count_ablation/` | Gain from the headline count vs the sentiment scores |
 | `results/relevance_ablation/<model>/` | Gain from company-naming headlines only vs all headlines |
 | `results/volatility_target/` | Size-of-move prediction: RMSE and large-move F1 with and without sentiment |
+| `results/timestamped_news/` | Ablation with news assigned by exact publication time vs date only (Benzinga via Alpaca) |
 | `results/same_day_association/` | Correlation of sentiment with returns before, on and after the news day |
 | `results/event_study/` | Market-adjusted returns around extreme sentiment days; trading test with costs |
 

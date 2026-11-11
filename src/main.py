@@ -82,6 +82,15 @@ def main() -> None:
         run_relevance("lstm_balanced")
         run_volatility()
 
+        import os
+
+        if os.getenv("ALPACA_API_KEY_ID") and os.getenv("ALPACA_API_SECRET_KEY"):
+            from src.timestamped_news import run as run_timestamped
+
+            run_timestamped()
+        else:
+            print("[SKIP] timestamped_news: set ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY in .env")
+
         from src.same_day_association import run_same_day_association
 
         run_same_day_association()
