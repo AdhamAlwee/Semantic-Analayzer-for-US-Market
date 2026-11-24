@@ -10,7 +10,10 @@ Steps (interim report, Sections 3.2-3.5):
      the company (FNSPID ticker tags also cover peer/market news)
   4. Recency weighting ACROSS days (exponential decay, half-life in trading days).
      FNSPID timestamps are date-only (midnight UTC), so intraday recency
-     weighting is not possible; a headline dated D only feeds moves after D's close.
+     weighting is not possible; a headline dated D goes to day D's features.
+     Caveat: 99.8% of timestamps are midnight UTC, so the 16:00 rule in step 2
+     rarely applies and news published after D's close can leak into day D.
+     src/lag_robustness.py and src/timestamped_news.py test this.
   5. The same aggregation per news source, for the source-comparison axis
 
 Usage:

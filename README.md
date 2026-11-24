@@ -160,10 +160,10 @@ Hypothesis: adding FinBERT sentiment to a price-only model significantly improve
 
 - [x] FNSPID data collection and coverage analysis
 - [x] FinBERT sentiment features (daily, decayed, company-specific, per source)
-- [x] Leakage-free walk-forward ablation at 1/3/5-day horizons (XGBoost, LSTM)
+- [x] Walk-forward ablation at 1/3/5-day horizons (XGBoost, LSTM); FNSPID dates are date-only, so after-close news can leak into same-day features (see lagged and timestamped checks)
 - [x] FinBERT vs non-agentic models and a naive Bayes baseline: text benchmark and downstream prediction
 - [x] News-source comparison
-- [x] Robustness checks: lagged sentiment, headline count, company-only headlines, size-of-move target
+- [x] Robustness checks: lagged sentiment, headline count, company-only headlines, size-of-move target, exactly timestamped Benzinga news
 - [x] Dissertation and technical paper
 
 ---

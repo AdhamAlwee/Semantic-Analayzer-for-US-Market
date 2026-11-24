@@ -62,7 +62,7 @@ def load_panel() -> pd.DataFrame:
 def assign_quintiles(df: pd.DataFrame, cutoff_rows: pd.Series) -> pd.Series:
     """Quintile (1-5) of sent_mean on news days, with cut-offs from cutoff_rows within each ticker."""
     q = pd.Series(np.nan, index=df.index)
-    for ticker, d in df.groupby("ticker"):
+    for _, d in df.groupby("ticker"):
         ref = d.loc[cutoff_rows.loc[d.index] & (d["news_count"] > 0), "sent_mean"]
         edges = ref.quantile([0.2, 0.4, 0.6, 0.8]).to_numpy()
         news = d["news_count"] > 0
